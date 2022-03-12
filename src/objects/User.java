@@ -1,23 +1,20 @@
 package objects;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 
 public class User {	
-	private int id;
+	private int userID;
 	private double balance;
 	private HashSet<Request> requests;
 
-	public User(int userID, double balance, ArrayList<Request> requests) {
-		// TODO Auto-generated constructor stub
+	public User(int userID, double balance, HashSet<Request> requests) {
+		this.userID = userID;
+		this.balance = balance;
+		this.requests = requests;
 	}
 
 	public void addRequest(Request request) {
 		this.requests.add(request);
-	}
-
-	public void transfer(int userID, double amount) {
-		// TODO Auto-generated method stub
 	}
 
 	public double getBalance() {
@@ -28,12 +25,12 @@ public class User {
 		this.balance = balance;
 	}
 
-	public int getId() {
-		return id;
+	public int getID() {
+		return userID;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setID(int id) {
+		this.userID = id;
 	}
 
 	public HashSet<Request> getRequests() {

@@ -1,11 +1,12 @@
+import java.text.DecimalFormat;
 import java.util.HashSet;
 
 import objects.Database;
+import objects.Group;
 import objects.Request;
 import objects.User;
 
 public class TrokoServer {
-
 
 	private Database database;
 	private User loggedUser;
@@ -21,7 +22,7 @@ public class TrokoServer {
 	 * @return balance o valor atual do saldo da conta
 	 */
 	public double balance() {
-		return loggedUser.getBalance();
+		return this.loggedUser.getBalance();
 	}
 
 	/**
@@ -32,14 +33,22 @@ public class TrokoServer {
 	 * @throws BalanceUnavailableException
 	 */
 	public void makePayment(int userID, double amount) {
-		User user = database.getUserById(userID);
-		if (amount > loggedUser.getBalance()) {
-			System.out.println("Erro ao transferir  " + "Saldo Insuficiente na conta " + loggedUser.getId() + "!");
+		User user = this.database.getUserByID(userID);
+		if (amount > this.loggedUser.getBalance()) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao transferir: Saldo Insuficiente na conta " + this.loggedUser.getID() + "!");
 		}
-		if (user == null) {
-			System.out.println("Erro ao transferir  " + "Utilizador" + loggedUser.getId() + " nao existente!");
+		if (user == null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao transferir: Utilizador" + userID + " nao existente!");
 		}
-		user.transfer(userID, amount);
+		transfer(this.loggedUser, user, amount);
+	}
+
+	private void transfer(User from, User to, double amount) {
+		double fromNewBalance = from.getBalance() - amount;
+		from.setBalance(fromNewBalance);
+
+		double toNewBalance = to.getBalance() + amount;
+		to.setBalance(toNewBalance);
 	}
 
 	/**
@@ -49,11 +58,12 @@ public class TrokoServer {
 	 * @param amount o valor a pedir
 	 */
 	public void requestPayment(int userID, double amount) {
-		User user = database.getUserById(userID);
-		if (user == null) {
-			System.out.println("Erro ao fazer um pedido de pagamento: " + "Utilizador " + userID + " nao existente!");
+		User user = this.database.getUserByID(userID);
+		if (user == null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao fazer um pedido de pagamento: Utilizador " + userID + " nao existente!");
 		}
-		Request request = new Request(database.getUniqueRequestId(), amount, userID);
+		Request request = new Request(this.database.getUniqueRequestID(), amount, userID);
+		this.database.addRequest(request);
 		user.addRequest(request);
 	}
 
@@ -64,75 +74,157 @@ public class TrokoServer {
 	 */
 
 	public HashSet<Request> viewRequests() {
-		return loggedUser.getRequests();
+		return this.loggedUser.getRequests();
 	}
 
 	/**
 	 * Autoriza o pagamento do pedido com identificador reqID, removendo o pedido da
 	 * lista de pagamentos pendentes
 	 * 
-	 * @param requestId o Id do Request a pagar
+	 * @param requestID o ID do Request a pagar
 	 */
-	public void payRequest(int requestId) {
-		Request request = database.getRequestById(requestId);
-		if (request == null) {
-			System.out.println("Erro ao autorizar o pagamento : Pedido " + requestId + " nao existente!");
+	public void payRequest(int requestID) {
+		Request request = this.database.getRequestByID(requestID);
+		if (request == null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao autorizar o pagamento : Pedido " + requestID + " nao existente!");
 		}
-		if (request.getAmount() > loggedUser.getBalance()) {
-			System.out.println("Erro ao autorizar o pagamento: Saldo Insuficiente na conta " + loggedUser.getId() + "!");
+		if (request.getAmount() > loggedUser.getBalance()) { // TODO throw this instead of sysouting it
+			System.out
+					.println("Erro ao autorizar o pagamento: Saldo Insuficiente na conta " + loggedUser.getID() + "!");
 		}
-		if (request.getUserID() != loggedUser.getId()) {
-			System.out.println("Erro ao autorizar o pagamento: identificador referente"
-					+ "a um pagamento pedido a outro cliente");
+		if (request.getUserID() != loggedUser.getID()) { // TODO throw this instead of sysouting it
+			System.out.println(
+					"Erro ao autorizar o pagamento: identificador referente" + "a um pagamento pedido a outro cliente");
 		}
-		
+		this.database.removeRequest(request);
 		this.loggedUser.removeRequest(request);
 	}
 	/*
-	 * - obtainQRcode <amount> " cria um pedido de pagamento no servidor e
-	 * colocao numa lista de pagamentos identificados por QR code. Cada pedido tem
-	 * um QR code unico no sistema, e esta associado ao clientID que criou o pedido
-	 * (a quem o pagamento sera feito), e ao valor amount a ser pago. O servidor
-	 * devera devolver uma imagem com o QR code. 
+	 * - obtainQRcode <amount> " cria um pedido de pagamento no servidor e colocao
+	 * numa lista de pagamentos identificados por QR code. Cada pedido tem um QR
+	 * code unico no sistema, e esta associado ao clientID que criou o pedido (a
+	 * quem o pagamento sera feito), e ao valor amount a ser pago. O servidor devera
+	 * devolver uma imagem com o QR code.
 	 * 
-	 * "- confirmQRcode <QRcode> "
-	 * confirma e autoriza o pagamento identificado por QR code, removendo o pedido
-	 * da lista mantida pelo servidor. Se o cliente nao tiver saldo suficiente na
-	 * conta, deve ser retornado um erro (mas o pedido continua a ser removido da
-	 * lista). Se o pedido identificado por QR code nao existir tambem deve retornar
-	 * um erro. "
+	 * "- confirmQRcode <QRcode> " confirma e autoriza o pagamento identificado por
+	 * QR code, removendo o pedido da lista mantida pelo servidor. Se o cliente nao
+	 * tiver saldo suficiente na conta, deve ser retornado um erro (mas o pedido
+	 * continua a ser removido da lista). Se o pedido identificado por QR code nao
+	 * existir tambem deve retornar um erro. "
+	 */
+
+	/**
+	 * Cria um grupo para pagamentos partilhados, cujo dono (owner) e o cliente que
+	 * o criou
 	 * 
-	 * - newgroup <groupID> " cria um grupo para pagamentos partilhados,
-	 * cujo dono (owner) sera o cliente que o criou. Se o grupo ja existir assinala
-	 * um erro.
+	 * @param groupID o id do grupo a criar
+	 */
+	public void newGroup(int groupID) {
+		if (this.database.getGroupByID(groupID) != null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao criar o grupo com id " + groupID + " : um grupo com esse id ja existe!");
+		}
+		Group group = new Group(groupID, this.loggedUser);
+		this.database.addGroup(group);
+	}
+
+	/**
+	 * Adiciona o utilizador userID como membro do grupo indicado
 	 * 
-	 * - addu <userID> <groupID> " adiciona o utilizador userID como membro do
-	 * grupo indicado. Se userID ja pertencer ao grupo ou se o grupo nao existir
-	 * deve ser assinalado um erro. Apenas os donos dos grupos podem adicionar
-	 * utilizadores aos seus grupos, pelo que devera ser assinalado um erro caso o
-	 * cliente nao seja dono do grupo. "
+	 * @param userID  utilizador a adicionar como membro do grupo
+	 * @param groupID grupo a que adicionar o utilizador
+	 */
+	public void addUserToGroup(int userID, int groupID) {
+		User user = this.database.getUserByID(userID);
+		if (user == null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao adicionar utilizador ao grupo: Utilizador " + userID + " nao encontrado!");
+		}
+		Group group = this.database.getGroupByID(groupID);
+		if (group == null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao adicionar utilizador ao grupo: Grupo " + groupID + " nao encontrado!");
+		}
+		if (group.getUserList().contains(user)) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao adicionar utilizador ao grupo: Utilizador " + userID + " ja no grupo!");
+		}
+		if (this.loggedUser.getID() != group.getOwner().getID()) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao adicionar utilizador ao grupo: Utilizador logado nao e dono do grupo!");
+		}
+		group.addUser(user);
+	}
+
+	/**
+	 * Mostra uma lista dos grupos de que o cliente e dono, e uma lista dos grupos a
+	 * que pertence
 	 * 
-	 * - groups " mostra uma lista dos grupos de
-	 * que o cliente e dono, e uma lista dos grupos a que pertence. Caso nao seja
-	 * dono de nenhum grupo ou nao seja membro de nenhum grupo, esses factos deverao
-	 * ser assinalados. "
+	 * @return uma lista com dois elmentos: result[0] tem os elementos de que o
+	 *         utilizador e dono result[1] tem os elementos a que o utilizador
+	 *         pertence
+	 */
+	@SuppressWarnings("unchecked")
+	public HashSet<Group>[] viewGroups() {
+		HashSet<Group>[] result = new HashSet[2];
+		HashSet<Group> groupsUserOwns = this.database.getGroupsByOwner(this.loggedUser);
+		if (groupsUserOwns.isEmpty()) {
+			System.out.println("Utilizador logado nao e dono de nehum grupo!");
+		}
+		result[0] = groupsUserOwns;
+		HashSet<Group> groupsUserBelongs = this.database.getGroupsByClient(this.loggedUser);
+		if (groupsUserBelongs.isEmpty()) {
+			System.out.println("Utilizador logado nao e membro de nehum grupo!");
+		}
+		result[1] = groupsUserBelongs;
+		return result;
+	}
+
+	/**
+	 * Divide o pagamento da quantia pelos membros do grupo com id groupOD
 	 * 
-	 * - dividepayment <groupID> <amount> " cria um pedido de
-	 * pagamento de grupo, cujo valor total amount deve ser dividido pelos membros
-	 * do grupo groupID. O pedido deve dar origem a pedidos individuais a serem
-	 * colocados na lista de pedidos pendentes de cada membro do grupo. Quando todos
-	 * os pedidos individuais forem pagos, o pedido de grupo pode ser movido para um
-	 * historico de pedidos de grupo. Caso nao seja dono do grupo ou o grupo nao
+	 * @param groupID o id do grupo a quem pedir dinheiro
+	 * @param amount  a quantidade de dinheiro a dividir
+	 */
+	public void dividePayment(int groupID, int amount) {
+		// TODO Quando todos os pedidos individuais forem pagos, o pedido de grupo pode
+		// ser movido para um historico de pedidos de grupo.
+		Group group = this.database.getGroupByID(groupID);
+		if (group == null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao criar um pedido de pagamento de grupo: grupo " + groupID + " nao existente!");
+		}
+		if (group.getOwner().getID() != this.loggedUser.getID()) { // TODO throw this instead of sysouting it
+			System.out.println(
+					"Erro ao criar um pedido de pagamento de grupo: o utilizador nao e dono do grupo " + groupID + "!");
+		}
+		HashSet<User> usersInGroup = group.getUserList();
+		DecimalFormat df = new DecimalFormat("0.00");
+		double amountPerMember = amount / usersInGroup.size();
+		double roundedAmount = Double.parseDouble(df.format(amountPerMember));
+		for (User user : usersInGroup) {
+			Request request = new Request(this.database.getUniqueRequestID(), roundedAmount, this.loggedUser.getID());
+			user.addRequest(request);
+		}
+	}
+
+	/**
+	 * Mostra o estado de cada pedido de pagamento de grupo, ou seja, que membros de
+	 * grupo ainda nao pagaram esse pedido
+	 * 
+	 * @param groupID id do grupo a verificar
+	 */
+	public void statusPayments(int groupID) {
+		Group group = this.database.getGroupByID(groupID);
+		if (group == null) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao mostrar um pedido de pagamento de grupo: grupo " + groupID + " nao existente!");
+		}
+		if (group.getOwner().getID() != this.loggedUser.getID()) { // TODO throw this instead of sysouting it
+			System.out.println("Erro ao mostrar um pedido de pagamento de grupo: o utilizador nao e dono do grupo "
+					+ groupID + "!");
+		}
+	}
+	/*
+	 * - statuspayments <groupID> " . Caso nao seja dono do grupo ou o grupo nao
 	 * exista, deve ser assinalado um erro. "
 	 * 
-	 * - statuspayments <groupID> " mostra o
-	 * estado de cada pedido de pagamento de grupo, ou seja, que membros de grupo
-	 * ainda nao pagaram esse pedido. Caso nao seja dono do grupo ou o grupo nao
-	 * exista, deve ser assinalado um erro. "
-	 * 
-	 * - history <groupID> " mostra o
-	 * historico dos pagamentos do grupo groupID ja concluidos. Caso nao seja dono
-	 * do grupo ou o grupo nao exista, deve ser assinalado um erro.
+	 * - history <groupID> " mostra o historico dos pagamentos do grupo groupID ja
+	 * concluidos. Caso nao seja dono do grupo ou o grupo nao exista, deve ser
+	 * assinalado um erro.
 	 */
 
 }
