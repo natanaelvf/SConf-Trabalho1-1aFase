@@ -1,5 +1,6 @@
 package objects;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -70,6 +71,11 @@ public class Database {
 	
 	private boolean isOwner(Entry<Integer, Group> group, User user) {
 		return group.getValue().getOwner().getID() == user.getID();
+	}
+
+	public HashSet<Group> getGroupBase() {
+		Group[] groups = (Group[]) this.groupBase.values().toArray();
+		return new HashSet<Group>(Arrays.asList(groups));
 	}
 
 }

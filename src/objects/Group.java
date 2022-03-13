@@ -1,5 +1,6 @@
 package objects;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 
 public class Group {
@@ -8,6 +9,7 @@ public class Group {
 	private User owner;
 	private HashSet<User> userList;
 	private HashSet<Request> requestList;
+	private ArrayList<HashSet<Request>> requestListHistory;
 
 	public Group(int groupID, User loggedUser) {
 		this.setGroupID(groupID);
@@ -41,6 +43,27 @@ public class Group {
 
 	public void addUser(User user) {
 		this.userList.add(user);
+	}
+
+	public void addRequest(Request request) {
+		this.requestList.add(request);
+	}
+
+	public HashSet<Request> getRequestList() {
+		return requestList;
+	}
+
+	public void setRequestList(HashSet<Request> requestList) {
+		this.requestList = requestList;
+	}
+
+	public void addRequestListToHistory(HashSet<Request> requests) {
+		this.requestListHistory.add(requests);
+		
+	}
+
+	public ArrayList<HashSet<Request>> getHistory() {
+		return this.requestListHistory;
 	}
 
 }

@@ -29,5 +29,10 @@ public class Request {
 	public void setID(int id) {
 		this.id = id;
 	}
+	
+	@Override
+	public String toString() {
+		return "Amount: " + this.amount + " User that owes you: " + this.userID;
+	}
 
 }
