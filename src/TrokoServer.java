@@ -151,10 +151,9 @@ public class TrokoServer {
 	 * continua a ser removido da lista). Se o pedido identificado por QR code nao
 	 * existir tambem deve retornar um erro. " TODO
 	 */
-	/**  public void confirmQRcode(int QRcode) {
-
+	  public void confirmQRcode(int QRcode) {
+	    payRequest(QRcode);
 	}
-    */ 
 	/**
 	 * Cria um grupo para pagamentos partilhados, cujo dono (owner) e o cliente que
 	 * o criou
