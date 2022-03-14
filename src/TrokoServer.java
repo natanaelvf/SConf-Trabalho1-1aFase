@@ -132,20 +132,29 @@ public class TrokoServer {
 		this.database.removeRequest(request);
 		this.loggedUser.removeRequest(request);
 	}
-	/*
+	/** 
 	 * - obtainQRcode <amount> " cria um pedido de pagamento no servidor e colocao
 	 * numa lista de pagamentos identificados por QR code. Cada pedido tem um QR
 	 * code unico no sistema, e esta associado ao clientID que criou o pedido (a
 	 * quem o pagamento sera feito), e ao valor amount a ser pago. O servidor devera
 	 * devolver uma imagem com o QR code. TODO
-	 * 
-	 * "- confirmQRcode <QRcode> " confirma e autoriza o pagamento identificado por
+	 */
+	public int obtainQRcode(double amount) {
+		requestPayment(this.loggedUser, amount);
+		Request[] requests = viewRequests.toArray(new Request[viewRequests.size()]);
+		return requests[requests.length()-1] ;
+	}
+	
+	 /** "- confirmQRcode <QRcode> " confirma e autoriza o pagamento identificado por
 	 * QR code, removendo o pedido da lista mantida pelo servidor. Se o cliente nao
 	 * tiver saldo suficiente na conta, deve ser retornado um erro (mas o pedido
 	 * continua a ser removido da lista). Se o pedido identificado por QR code nao
 	 * existir tambem deve retornar um erro. " TODO
 	 */
+	/**  public void confirmQRcode(int QRcode) {
 
+	}
+    */ 
 	/**
 	 * Cria um grupo para pagamentos partilhados, cujo dono (owner) e o cliente que
 	 * o criou
