@@ -77,7 +77,7 @@ public class TrokoServer {
 			throw new UserNotFoundException(
 					"Erro ao fazer um pedido de pagamento: Utilizador " + userID + " nao existente!");
 		}
-		Request request = new Request(this.database.getUniqueRequestID(), amount, userID);
+		Request request = new Request(this.database.getUniqueRequestID(), amount, userID, this.database.getUniqueQRCodeID());
 		this.database.addRequest(request);
 		user.addRequest(request);
 	}
@@ -151,8 +151,12 @@ public class TrokoServer {
 	 * continua a ser removido da lista). Se o pedido identificado por QR code nao
 	 * existir tambem deve retornar um erro. " TODO
 	 */
-	  public void confirmQRcode(int QRcode) {
-	    payRequest(QRcode);
+	  public void confirmQRcode(int qrCodeID) throws InsuficientFundsException, QRCodeNotFoundException{
+	    QRCode qrcode=this.database.getQRCodeByID(qrCodeID);
+		int requestID = qrcode.getRequestID();
+		payRequest(requestID);
+
+
 	}
 	/**
 	 * Cria um grupo para pagamentos partilhados, cujo dono (owner) e o cliente que
@@ -262,7 +266,7 @@ public class TrokoServer {
 		double roundedAmount = Double.parseDouble(df.format(amountPerMember));
 
 		for (User user : usersInGroup) {
-			Request request = new Request(this.database.getUniqueRequestID(), roundedAmount, this.loggedUser.getID());
+			Request request = new Request(this.database.getUniqueRequestID(), roundedAmount, this.loggedUser.getID(), this.database.getUniqueQRCodeID());
 			user.addRequest(request);
 			group.addRequest(request);
 		}
