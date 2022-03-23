@@ -14,14 +14,27 @@ public class Database {
 	private HashMap<Integer,User> userBase;
 	private HashMap<Integer,Request> requestBase;
 	private HashMap<Integer,Group> groupBase;
+	private HashMap<Integer,QRCode> qrcodeBase;
 
 	public Request getRequestByID(int requestID) {
 		return requestBase.get(requestID);
 	}
 
+	public QRCode getQRCodeByID(int qrCodeID){
+		return qrcodeBase.get(qrCodeID);
+	}
+
 	public int getUniqueRequestID() {
 		int id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
 		while(requestBase.keySet().contains(id)) {
+			id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
+		}
+		return id;
+	}
+
+	public int getUniqueQRCodeID() {
+		int id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
+		while(qrcodeBase.keySet().contains(id)) {
 			id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
 		}
 		return id;
