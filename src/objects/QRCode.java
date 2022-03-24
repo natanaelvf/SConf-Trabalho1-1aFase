@@ -1,13 +1,24 @@
 package objects;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Map;
+
+import javax.imageio.ImageIO;
+import javax.naming.spi.DirStateFactory.Result;
 
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.MultiFormatReader;
 import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.NotFoundException;
 import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
+import com.google.zxing.common.HybridBinarizer;
 
 public class QRCode{
     private int id;
@@ -24,7 +35,7 @@ public class QRCode{
    public int getID(){
        return id;
    }
-   
+      
    public static void generateQRcode(String data, Path path, String charset, int h, int w) throws WriterException, IOException  
    { 
    BitMatrix matrix = new MultiFormatWriter().encode(new String(data.getBytes(charset), charset), BarcodeFormat.QR_CODE, w, h);  

@@ -115,7 +115,7 @@ public class TrokoServer {
 						Application.obtainQRcode(Double.parseDouble(data[1]));
 						break;
 					case "c": case "confirm":
-						Application.confirmQRcode(data[1].readQRCode());
+						Application.confirmQRcode(Application.database.getQRCodeByID(Integer.parseInt(data[1])));
 						break;
 					case "n": case "newgroup":
 						Application.newGroup(Integer.parseInt(data[1]));
@@ -134,8 +134,7 @@ public class TrokoServer {
 						break;
 					case "pay" : case "payrequest":
 						Application.payRequest(Integer.parseInt(data[1]));
-						break;
-						
+						break;	
 					}
 				}
 
@@ -173,6 +172,9 @@ public class TrokoServer {
 				e.printStackTrace();
 			} catch (UserNotRequesteeException e) {
 				System.out.println("identificador referente a um pagamento pedido a outro cliente");
+				e.printStackTrace();
+			} catch (QRCodeNotFoundException e) {
+				System.out.println("QRCode não existente");
 				e.printStackTrace();
 			}
 		}
