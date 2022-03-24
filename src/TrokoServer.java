@@ -223,10 +223,12 @@ public class TrokoServer {
 	 * quem o pagamento sera feito), e ao valor amount a ser pago. O servidor devera
 	 * devolver uma imagem com o QR code. TODO
 	 */
-	public int obtainQRcode(double amount) {
-		requestPayment(this.loggedUser, amount);
-		Request[] requests = viewRequests.toArray(new Request[viewRequests.size()]);
-		return requests[requests.length()-1] ;
+	public void obtainQRcode(double amount) {
+		QrCode qrCode = new QrCode(this.database.getUniqueQRCodeID(), amount , this.loggedUser.getID());
+		Request request = new Request(this.database.getUniqueRequestID(), amount, this.loggedUser.getID() , qrCode);
+		this.loggedUser.addRequest(request);
+		//return the image from QRCode, using the method that is created in the class
+
 	}
 	
 	 /** "- confirmQRcode <QRcode> " confirma e autoriza o pagamento identificado por

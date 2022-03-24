@@ -5,13 +5,13 @@ public class Request {
 	private double amount;
 	private int userID;
 	private QrCode qrCode;
-	private int qrCodeID;
+
 	
-	public Request(int id, double amount, int userID, int qrCodeID) {
+	public Request(int id, double amount, int userID, QrCode qrCode) {
 		this.id = id;
 		this.amount = amount;
 		this.userID = userID;
-		this.qrCode = new QrCode(qrCodeID, userID, amount, id);
+		this.qrCode = qrCode;
 	}
 	
 	public double getAmount() {

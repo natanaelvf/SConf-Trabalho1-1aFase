@@ -23,7 +23,7 @@ public class Database {
 	public QRCode getQRCodeByID(int qrCodeID){
 		return qrcodeBase.get(qrCodeID);
 	}
-
+	
 	public int getUniqueRequestID() {
 		int id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
 		while(requestBase.keySet().contains(id)) {
@@ -44,6 +44,10 @@ public class Database {
 		return userBase.get(userID);
 	}
 
+	public void addQRCode (QRCode qrCode){
+		this.qrcodeBase.put(qrCode.getID(), qrCode);
+	}
+
 	public void addRequest(Request request) {
 		this.requestBase.put(request.getID(), request);
 	}
@@ -59,6 +63,7 @@ public class Database {
 	public void addGroup(Group group) {
 		this.groupBase.put(group.getGroupID(), group);
 	}
+
 
 	public HashSet<Group> getGroupsByOwner(User user) {
 		HashSet<Group> result = new HashSet<>();
