@@ -4,14 +4,21 @@ public class Request {
 	private int id;
 	private double amount;
 	private int userID;
-	private QrCode qrCode;
-
+	private QRCode qrCode;
 	
-	public Request(int id, double amount, int userID, QrCode qrCode) {
+	public Request(int id, double amount, int userID) {
 		this.id = id;
 		this.amount = amount;
 		this.userID = userID;
+		this.qrCode = null;
+	}
+	
+	public void setQRCode(QRCode qrCode) {
 		this.qrCode = qrCode;
+	}
+	
+	public QRCode getQRCode() {
+		return this.qrCode;
 	}
 	
 	public double getAmount() {

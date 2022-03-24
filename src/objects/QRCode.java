@@ -1,6 +1,16 @@
+package objects;
+
+import java.io.IOException;
+import java.nio.file.Path;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+
 public class QRCode{
     private int id;
-    //pessoa a quem vai ser paga amount
     private int userID;
     private double amount;
 
@@ -11,13 +21,14 @@ public class QRCode{
         this.amount = amount;
     }
 
-   /*TODO in database public void obtainQRCode(){
-        return a imagem
-   }
-   */ 
-
    public int getID(){
        return id;
    }
+   
+   public static void generateQRcode(String data, Path path, String charset, int h, int w) throws WriterException, IOException  
+   { 
+   BitMatrix matrix = new MultiFormatWriter().encode(new String(data.getBytes(charset), charset), BarcodeFormat.QR_CODE, w, h);  
+   MatrixToImageWriter.writeToPath(matrix, charset, path);
+   }  
 
 }

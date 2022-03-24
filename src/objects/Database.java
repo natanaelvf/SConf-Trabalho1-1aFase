@@ -14,14 +14,23 @@ public class Database {
 	private HashMap<Integer,User> userBase;
 	private HashMap<Integer,Request> requestBase;
 	private HashMap<Integer,Group> groupBase;
-	private HashMap<Integer,QRCode> qrcodeBase;
+	private HashMap<Integer,QRCode> qrCodeBase;
 
 	public Request getRequestByID(int requestID) {
 		return requestBase.get(requestID);
 	}
 
 	public QRCode getQRCodeByID(int qrCodeID){
-		return qrcodeBase.get(qrCodeID);
+		return qrCodeBase.get(qrCodeID);
+	}
+	
+	public Request getRequestByQRCode(QRCode qrCode) {
+		for (Request request : this.requestBase.values()) {
+			if (request.getQRCode() == qrCode) {
+				return request;
+			}
+		}
+		return null;
 	}
 	
 	public int getUniqueRequestID() {
@@ -34,7 +43,7 @@ public class Database {
 
 	public int getUniqueQRCodeID() {
 		int id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
-		while(qrcodeBase.keySet().contains(id)) {
+		while(qrCodeBase.keySet().contains(id)) {
 			id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
 		}
 		return id;
@@ -45,7 +54,7 @@ public class Database {
 	}
 
 	public void addQRCode (QRCode qrCode){
-		this.qrcodeBase.put(qrCode.getID(), qrCode);
+		this.qrCodeBase.put(qrCode.getID(), qrCode);
 	}
 
 	public void addRequest(Request request) {
@@ -91,9 +100,17 @@ public class Database {
 		return group.getValue().getOwner().getID() == user.getID();
 	}
 
-	public HashSet<Group> getGroupBase() {
-		Group[] groups = (Group[]) this.groupBase.values().toArray();
-		return new HashSet<Group>(Arrays.asList(groups));
+	public void removeRequestFromGroup(Request request) {
+		for (Group group : this.groupBase.values()) {
+			HashSet<Request> requests = group.getRequestList();
+			if (requests.contains(request)) {
+				requests.remove(request);
+				group.setRequestList(requests);
+			}
+			if (group.getRequestList().isEmpty()) {
+				group.addRequestListToHistory(requests);
+			}
+		}
 	}
 
 }

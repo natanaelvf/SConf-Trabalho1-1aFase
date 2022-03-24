@@ -1,10 +1,4 @@
-/TrokoServer.class
 /objects/
-/exceptions/
-/TrokoServer$myServer$ServerThread.class
-/TrokoServer$myServer.class
-/TrokoServer$ServerThread.class
-/ServerThread.class
-/users
-/Trokos.class
-/pendingRequests
+/Trokos$ServerThread.class
+/Trokos$ClientThread.class
+/Application.class
