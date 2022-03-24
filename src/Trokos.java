@@ -17,7 +17,7 @@ public class Trokos {
 
 	public static void main(String[] args) throws IllegalArgumentNumberException, NumberFormatException, InvalidUserIdException, InvalidPasswordException, IOException, ClassNotFoundException {
 
-		if (args.length > 2) {
+		if (args.length > 3) {
 			throw new IllegalArgumentNumberException("Demasiados args passados ao cliente!");
 		}
 		String serverAdress = args[0];

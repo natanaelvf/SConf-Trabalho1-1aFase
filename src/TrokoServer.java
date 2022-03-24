@@ -78,11 +78,11 @@ public class TrokoServer {
 				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 
-				String user = null;
+				int user = 0;
 				String passwd = null;
 
 				try {
-					user = (String)inStream.readObject();
+					user = (int)inStream.readObject();
 					passwd = (String)inStream.readObject();
 				} catch (ClassNotFoundException e1) {
 					e1.printStackTrace();
@@ -97,8 +97,44 @@ public class TrokoServer {
 				while (input != "quit" || input != "q" ) {
 					
 					input = (String)inStream.readObject();
-					switch(input) {
-					case "b": case "balace":
+					String [] data= input.split(" ");
+					switch(data[0]) {
+					case "b": case "balance":
+						Application.viewBalance();
+						break;
+					case "p": case "makepay":
+						Application.makePayment(user, Double.parseDouble(data[1]));
+						break;
+					case "r": case "requestpayment":
+						Application.requestPayment(user, Double.parseDouble(data[1]));
+						break;
+					case "v": case "view":
+						Application.viewRequests();
+						break;
+					case "o": case "obtain":
+						Application.obtainQRcode(Double.parseDouble(data[1]));
+						break;
+					case "c": case "confirm":
+						Application.confirmQRcode(data[1].readQRCode());
+						break;
+					case "n": case "newgroup":
+						Application.newGroup(Integer.parseInt(data[1]));
+						break;
+					case "a": case "addu":
+						Application.addUserToGroup(user, Integer.parseInt(data[1]));
+						break;
+					case "g": case "groups":
+						Application.viewGroups();
+						break;
+					case "s": case "status":
+						Application.statusPayments(Integer.parseInt(data[1]));
+						break;
+					case "h": case "history":
+						Application.viewHistory(Integer.parseInt(data[1]));
+						break;
+					case "pay" : case "payrequest":
+						Application.payRequest(Integer.parseInt(data[1]));
+						break;
 						
 					}
 				}
@@ -110,18 +146,47 @@ public class TrokoServer {
 
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
+			} catch (UserNotFoundException e) {
+				System.out.println("Utilizador  não existente!");
+				e.printStackTrace();
+			} catch (InsuficientFundsException e) {
+				System.out.println("Saldo Insuficiente na conta !");
+				e.printStackTrace();
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
+			} catch (WriterException e) {
+				e.printStackTrace();
+			} catch (GroupAleadyExistsException e) {
+				System.out.println("Grupo já existe!");
+				e.printStackTrace();
+			} catch (GroupNotFoundException e) {
+				System.out.println("Grupo não encontrado!");
+				e.printStackTrace();
+			} catch (UserNotOwnerException e) {
+				System.out.println("Utilizador logado não é dono do grupo!");
+				e.printStackTrace();
+			} catch (UserAlreadyInGroupException e) {
+				System.out.println("Utilizador já no grupo!");
+				e.printStackTrace();
+			} catch (RequestNotFoundException e) {
+				System.out.println("Pedido não encontrado!");
+				e.printStackTrace();
+			} catch (UserNotRequesteeException e) {
+				System.out.println("identificador referente a um pagamento pedido a outro cliente");
+				e.printStackTrace();
 			}
 		}
 	}
 
 
-	private boolean authenticateUser(String user, String passwd) {
+	private boolean authenticateUser(int user, String passwd) {
 		try {
 			File myObj = new File("../auth.txt");
 			Scanner myReader = new Scanner(myObj);
 			while (myReader.hasNextLine()) {
+				int data1 = myReader.nextInt();
 				String[] data = myReader.nextLine().split(".");
-				if (data[0] == user && data[1] == passwd) {
+				if (data1==user && data[1] == passwd) {
 					myReader.close();
 					return true;
 				}

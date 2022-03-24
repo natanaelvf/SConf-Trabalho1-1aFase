@@ -33,7 +33,7 @@ public class Application {
 	 * 
 	 * @return balance o valor atual do saldo da conta
 	 */
-	public double viewBalance() {
+	public static double viewBalance() {
 		return Application.loggedUser.getBalance();
 	}
 
@@ -47,7 +47,7 @@ public class Application {
 	 *                                   suficiente na conta
 	 * @throws UserNotFoundException     se o utilizador userID nao existir
 	 */
-	public void makePayment(int userID, double amount) throws UserNotFoundException, InsuficientFundsException {
+	public static void makePayment(int userID, double amount) throws UserNotFoundException, InsuficientFundsException {
 		User user = Application.database.getUserByID(userID);
 		if (amount > Application.loggedUser.getBalance()) {
 			throw new InsuficientFundsException(
@@ -59,7 +59,7 @@ public class Application {
 		transfer(Application.loggedUser, user, amount);
 	}
 
-	private void transfer(User from, User to, double amount) {
+	private static void transfer(User from, User to, double amount) {
 		double fromNewBalance = from.getBalance() - amount;
 		from.setBalance(fromNewBalance);
 
@@ -75,7 +75,7 @@ public class Application {
 	 * 
 	 * @throws UserNotFoundException se o utilizador userID nao existir
 	 */
-	public void requestPayment(int userID, double amount) throws UserNotFoundException {
+	public static void requestPayment(int userID, double amount) throws UserNotFoundException {
 		User user = Application.database.getUserByID(userID);
 		if (user == null) {
 			throw new UserNotFoundException(
@@ -92,7 +92,7 @@ public class Application {
 	 * @return a lista de pedidos de pagamentos pendentes
 	 */
 
-	public HashSet<Request> viewRequests() {
+	public static HashSet<Request> viewRequests() {
 		return Application.loggedUser.getRequests();
 	}
 
@@ -108,7 +108,7 @@ public class Application {
 	 * @throws UserNotRequesteeException o utilizador nao e a quem foi pedido o
 	 *                                   pedido com id requestID
 	 */
-	public void payRequest(int requestID)
+	public static void payRequest(int requestID)
 			throws RequestNotFoundException, InsuficientFundsException, UserNotRequesteeException {
 		Request request = Application.database.getRequestByID(requestID);
 		if (request == null) {
@@ -137,7 +137,7 @@ public class Application {
 	 * @throws WriterException 
 	 */
 
-	public void obtainQRcode(double amount) throws WriterException, IOException {
+	public static void obtainQRcode(double amount) throws WriterException, IOException {
 		QRCode qrCode = new QRCode(Application.database.getUniqueQRCodeID(), amount , Application.loggedUser.getID());
 		Request request = new Request(Application.database.getUniqueRequestID(), amount, Application.loggedUser.getID());
 		request.setQRCode(qrCode);
@@ -157,7 +157,7 @@ public class Application {
 	 * continua a ser removido da lista). Se o pedido identificado por QR code nao
 	 * existir tambem deve retornar um erro. " TODO
 	 */
-	public void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException{
+	public static void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException{
 		Application.database.getQRCodeByID(qrCode.getID());
 		// TODO payRequest(requestID);
 	}
@@ -168,7 +168,7 @@ public class Application {
 	 * @param groupID o id do grupo a criar
 	 * @throws GroupAleadyExistsException se o grupo com id groupID ja existir
 	 */
-	public void newGroup(int groupID) throws GroupAleadyExistsException {
+	public static void newGroup(int groupID) throws GroupAleadyExistsException {
 		if (Application.database.getGroupByID(groupID) != null) {
 			throw new GroupAleadyExistsException(
 					"Erro ao criar o grupo com id " + groupID + " : um grupo com esse id ja existe!");
@@ -190,7 +190,7 @@ public class Application {
 	 * @throws UserAlreadyInGroupException se o utilizador userID ja estiver no
 	 *                                     grupo
 	 */
-	public void addUserToGroup(int userID, int groupID)
+	public static void addUserToGroup(int userID, int groupID)
 			throws UserNotFoundException, GroupNotFoundException, UserNotOwnerException, UserAlreadyInGroupException {
 		User user = Application.database.getUserByID(userID);
 		if (user == null) {
@@ -222,7 +222,7 @@ public class Application {
 	 *         pertence
 	 */
 	@SuppressWarnings("unchecked")
-	public HashSet<Group>[] viewGroups() {
+	public static HashSet<Group>[] viewGroups() {
 		HashSet<Group>[] result = new HashSet[2];
 		HashSet<Group> groupsUserOwns = Application.database.getGroupsByOwner(Application.loggedUser);
 
@@ -250,7 +250,7 @@ public class Application {
 	 * @throws InexistentGroupException se o grupo nao existir
 	 * @throws UserNotOwnerException    se o utilizador logado nao for dono do grupo
 	 */
-	public void dividePayment(int groupID, int amount)
+	public static void dividePayment(int groupID, int amount)
 			throws InexistentGroupException, InexistentGroupException, UserNotOwnerException {
 		Group group = Application.database.getGroupByID(groupID);
 		if (group == null) {
@@ -283,7 +283,7 @@ public class Application {
 	 * @throws GroupNotFoundException se o grupo nao existir
 	 * @throws UserNotOwner           se o utilizador logado nao for dono do grupo
 	 */
-	public void statusPayments(int groupID) throws GroupNotFoundException, UserNotOwnerException {
+	public static void statusPayments(int groupID) throws GroupNotFoundException, UserNotOwnerException {
 		Group group = Application.database.getGroupByID(groupID);
 		if (group == null) {
 			throw new GroupNotFoundException(
@@ -308,7 +308,7 @@ public class Application {
 	 * @throws UserNotOwnerException  se o utilizador logado nao for dono do grupo
 	 * 
 	 */
-	public void viewHistory(int groupID) throws GroupNotFoundException, UserNotOwnerException {
+	public static void viewHistory(int groupID) throws GroupNotFoundException, UserNotOwnerException {
 		Group group = Application.database.getGroupByID(groupID);
 		if (group == null) {
 			throw new GroupNotFoundException(
