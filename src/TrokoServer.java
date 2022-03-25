@@ -28,7 +28,7 @@ import objects.User;
 
 public class TrokoServer {
 
-	public static Application app = new Application();
+	public static Application app;
 	
 	public static void main(String[] args) throws IOException, IllegalArgumentNumberException {
         if (args.length > 1) {
