@@ -11,10 +11,10 @@ public class Database {
 	private final int MAX_ID = 999999999;
 	private final int MIN_ID = 100000000;
 	
-	private HashMap<Integer,User> userBase;
-	private HashMap<Integer,Request> requestBase;
-	private HashMap<Integer,Group> groupBase;
-	private HashMap<Integer,QRCode> qrCodeBase;
+	private HashMap<Integer,User> userBase = new HashMap<Integer,User>();
+	private HashMap<Integer,Request> requestBase = new HashMap<Integer,Request>();
+	private HashMap<Integer,Group> groupBase = new HashMap<Integer,Group>();
+	private HashMap<Integer,QRCode> qrCodeBase = new HashMap<Integer,QRCode>();
 
 	public Request getRequestByID(int requestID) {
 		return requestBase.get(requestID);
