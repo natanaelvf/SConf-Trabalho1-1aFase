@@ -5,10 +5,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Paths;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Scanner;
 
 import com.google.zxing.WriterException;
@@ -16,7 +12,6 @@ import com.google.zxing.WriterException;
 import exceptions.GroupAleadyExistsException;
 import exceptions.GroupNotFoundException;
 import exceptions.IllegalArgumentNumberException;
-import exceptions.InexistentGroupException;
 import exceptions.InsuficientFundsException;
 import exceptions.QRCodeNotFoundException;
 import exceptions.RequestNotFoundException;
@@ -24,19 +19,20 @@ import exceptions.UserAlreadyInGroupException;
 import exceptions.UserNotFoundException;
 import exceptions.UserNotOwnerException;
 import exceptions.UserNotRequesteeException;
-import objects.Database;
-import objects.Group;
-import objects.QRCode;
-import objects.Request;
-import objects.User;
+
 
 public class TrokoServer {
 
+	public static Application app = new Application();
+	
 	public static void main(String[] args) throws IOException, IllegalArgumentNumberException {
 		if (args.length > 1) {
 			throw new IllegalArgumentNumberException("Demasiados args passados ao servidor!");
 		}
-		int serverPort = Integer.parseInt(args[0]);
+		int serverPort = 45678;
+		if (args[0] != null) {
+			serverPort = Integer.parseInt(args[0]);
+		}
 		TrokoServer server = new TrokoServer();
 		server.startServer(serverPort);
 	}
@@ -101,40 +97,40 @@ public class TrokoServer {
 					String [] data= input.split(" ");
 					switch(data[0]) {
 					case "b": case "balance":
-						outStream.writeDouble(Application.viewBalance());
+						outStream.writeDouble(app.viewBalance());
 						break;
 					case "p": case "makepay":
-						Application.makePayment(user, Double.parseDouble(data[1]));
+						app.makePayment(user, Double.parseDouble(data[1]));
 						break;
 					case "r": case "requestpayment":
-						Application.requestPayment(user, Double.parseDouble(data[1]));
+						app.requestPayment(user, Double.parseDouble(data[1]));
 						break;
 					case "v": case "view":
-						Application.viewRequests();
+						app.viewRequests();
 						break;
 					case "o": case "obtain":
-						Application.obtainQRcode(Double.parseDouble(data[1]));
+						app.obtainQRcode(Double.parseDouble(data[1]));
 						break;
 					case "c": case "confirm":
-						Application.confirmQRcode(Application.database.getQRCodeByID(Integer.parseInt(data[1])));
+						app.confirmQRcode(app.database.getQRCodeByID(Integer.parseInt(data[1])));
 						break;
 					case "n": case "newgroup":
-						Application.newGroup(Integer.parseInt(data[1]));
+						app.newGroup(Integer.parseInt(data[1]));
 						break;
 					case "a": case "addu":
-						Application.addUserToGroup(user, Integer.parseInt(data[1]));
+						app.addUserToGroup(user, Integer.parseInt(data[1]));
 						break;
 					case "g": case "groups":
-						Application.viewGroups();
+						app.viewGroups();
 						break;
 					case "s": case "status":
-						Application.statusPayments(Integer.parseInt(data[1]));
+						app.statusPayments(Integer.parseInt(data[1]));
 						break;
 					case "h": case "history":
-						Application.viewHistory(Integer.parseInt(data[1]));
+						app.viewHistory(Integer.parseInt(data[1]));
 						break;
 					case "pay" : case "payrequest":
-						Application.payRequest(Integer.parseInt(data[1]));
+						app.payRequest(Integer.parseInt(data[1]));
 						break;
 					default :
 						

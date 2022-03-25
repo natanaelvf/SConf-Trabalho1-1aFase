@@ -2,18 +2,21 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.HashSet;
 import java.util.Scanner;
 
 import exceptions.IllegalArgumentNumberException;
 import exceptions.InvalidPasswordException;
 import exceptions.InvalidUserIdException;
+import objects.Request;
 import objects.User;
 
 public class Trokos {
 
-	static ObjectInputStream in;
-	static ObjectOutputStream out;
-	static Socket clientSocket;
+	 static ObjectInputStream in;
+	 static ObjectOutputStream out;
+	 static Socket clientSocket;
+	 static Application app = TrokoServer.app;
 
 	public static void main(String[] args) throws IllegalArgumentNumberException, NumberFormatException, InvalidUserIdException, InvalidPasswordException, IOException, ClassNotFoundException {
 
@@ -30,15 +33,16 @@ public class Trokos {
 
 		if (!isValidPassowrd(password)) {
 			throw new InvalidPasswordException("Uma password deve ter entre 6 e 20 characteres,"
-					+ " dos quais: um digito, uma letra maiuscula, uma minuscula e um caracter especial!");
+					+ " dos quais: dois digitos, duas letras maiusculas!");
 		}
 		
-		User user = Application.database.getUserByID(userId);
+		User user = app.database.getUserByID(userId);
 		
 		if (user != null) {
-			Application.setLoggedUser(user);
+			app.setLoggedUser(user);
 		} else {
-			User newUser = new User(Application.database.getUniqueQRCodeID(), userId, null);
+			User newUser = new User(app.database.getUniqueQRCodeID(), 100.00, new HashSet<Request>());
+			app.setLoggedUser(newUser);
 		}
 
 		clientSocket = new Socket(serverAdress, 45678);
@@ -76,6 +80,21 @@ public class Trokos {
 
 
 	public static boolean isValidPassowrd(String password) {
-		return password.matches("/^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?!.*\\s).{6,20}$/");
-	}
+
+        if (password.length() > 16 || password.length() < 6) return false;
+
+        int charCount = 0;
+        int numCount = 0;
+        for (int i = 0; i < password.length(); i++) {
+
+            char ch = password.charAt(i);
+
+            if (ch >= '0' && ch <= '9')  numCount++;
+            else if (Character.toUpperCase(ch) >= 'A' && Character.toUpperCase(ch) <= 'Z') charCount++;
+            else return false;
+        }
+
+
+        return (charCount >= 2 && numCount >= 2);
+    }
 }
