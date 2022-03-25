@@ -1,6 +1,5 @@
 package objects;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -111,6 +110,11 @@ public class Database {
 				group.addRequestListToHistory(requests);
 			}
 		}
+	}
+
+	public void addUser(User user) {
+		this.userBase.put(user.getID(), user);
+		
 	}
 
 }

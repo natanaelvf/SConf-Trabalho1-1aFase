@@ -36,7 +36,7 @@ public class Trokos {
 					+ " dos quais: dois digitos, duas letras maiusculas!");
 		}
 		
-		User user = app.database.getUserByID(userId);
+		User user = TrokoServer.app.database.getUserByID(userId);
 		
 		if (user != null) {
 			app.setLoggedUser(user);

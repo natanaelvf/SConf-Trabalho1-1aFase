@@ -173,7 +173,7 @@ public class Application {
 			throw new GroupAleadyExistsException(
 					"Erro ao criar o grupo com id " + groupID + " : um grupo com esse id ja existe!");
 		}
-		Group group = new Group(groupID, this.loggedUser);
+		Group group = new Group(groupID, this.loggedUser, new HashSet<User>());
 		this.database.addGroup(group);
 	}
 

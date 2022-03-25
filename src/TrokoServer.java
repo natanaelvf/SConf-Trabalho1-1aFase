@@ -5,6 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashSet;
 import java.util.Scanner;
 
 import com.google.zxing.WriterException;
@@ -19,11 +20,15 @@ import exceptions.UserAlreadyInGroupException;
 import exceptions.UserNotFoundException;
 import exceptions.UserNotOwnerException;
 import exceptions.UserNotRequesteeException;
+import objects.Database;
+import objects.Group;
+import objects.Request;
+import objects.User;
 
 
 public class TrokoServer {
 
-	public static Application app = new Application();
+	public static Application app;
 	
 	public static void main(String[] args) throws IOException, IllegalArgumentNumberException {
 		if (args.length > 1) {
@@ -33,6 +38,35 @@ public class TrokoServer {
 		if (args[0] != null) {
 			serverPort = Integer.parseInt(args[0]);
 		}
+		app = new Application();
+		Database database = new Database();
+		
+		User user1 = new User(100000001, 1000.00, null);
+		User user2 = new User(100000002, 2000.00, null);
+		User user3 = new User(100000003, 3000.00, null);
+		
+		Request request = new Request(100000001, 125.00, 100000003);
+		user1.addRequest(request);
+		request = new Request(100000002, 250.00, 100000002);
+		user1.addRequest(request);
+		request = new Request(100000003, 250.00, 100000002);
+		user3.addRequest(request);
+		
+		database.addUser(user1);
+		database.addUser(user2);
+		database.addUser(user3);
+		
+		HashSet<User> users = new HashSet<>();
+		users.add(user1);
+		users.add(user2);
+		users.add(user3);
+		
+		Group group = new Group(100000001, user1, users);
+		
+		database.addGroup(group);
+		
+		app.database = database;
+		
 		TrokoServer server = new TrokoServer();
 		server.startServer(serverPort);
 	}
