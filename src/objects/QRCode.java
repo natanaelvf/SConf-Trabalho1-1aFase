@@ -18,6 +18,7 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
+import com.google.zxing.common.ByteMatrix;
 import com.google.zxing.common.HybridBinarizer;
 
 public class QRCode{
@@ -38,7 +39,7 @@ public class QRCode{
       
    public static void generateQRcode(String data, Path path, String charset, int h, int w) throws WriterException, IOException  
    { 
-   BitMatrix matrix = new MultiFormatWriter().encode(new String(data.getBytes(charset), charset), BarcodeFormat.QR_CODE, w, h);  
+   ByteMatrix matrix = new MultiFormatWriter().encode(new String(data.getBytes(charset), charset), BarcodeFormat.QR_CODE, w, h);  
    MatrixToImageWriter.writeToPath(matrix, charset, path);
    }  
 

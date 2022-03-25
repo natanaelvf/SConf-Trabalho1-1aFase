@@ -74,8 +74,9 @@ public class TrokoServer {
 		}
 
 		public void run() {
+			ObjectOutputStream outStream =  null;
 			try {
-				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+				outStream = new ObjectOutputStream(socket.getOutputStream());
 				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 
 				int user = 0;
@@ -89,7 +90,7 @@ public class TrokoServer {
 				}
 
 				if (authenticateUser(user,passwd)){
-					outStream.writeObject(new Boolean(true));
+					outStream.writeUTF("LOGGED");
 				}
 				
 				String input = (String)inStream.readObject();
@@ -100,7 +101,7 @@ public class TrokoServer {
 					String [] data= input.split(" ");
 					switch(data[0]) {
 					case "b": case "balance":
-						Application.viewBalance();
+						outStream.writeDouble(Application.viewBalance());
 						break;
 					case "p": case "makepay":
 						Application.makePayment(user, Double.parseDouble(data[1]));
@@ -134,7 +135,9 @@ public class TrokoServer {
 						break;
 					case "pay" : case "payrequest":
 						Application.payRequest(Integer.parseInt(data[1]));
-						break;	
+						break;
+					default :
+						
 					}
 				}
 
@@ -146,35 +149,69 @@ public class TrokoServer {
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
 			} catch (UserNotFoundException e) {
-				System.out.println("Utilizador  não existente!");
+				try {
+					outStream.writeUTF("Utilizador  nao existente!");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			} catch (InsuficientFundsException e) {
-				System.out.println("Saldo Insuficiente na conta !");
+				try {
+					outStream.writeUTF("Saldo Insuficiente na conta !");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
-			} catch (NumberFormatException e) {
-				e.printStackTrace();
-			} catch (WriterException e) {
+			} catch (NumberFormatException | WriterException e) {
 				e.printStackTrace();
 			} catch (GroupAleadyExistsException e) {
-				System.out.println("Grupo já existe!");
+				try {
+					outStream.writeUTF("Grupo ja existe!");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			} catch (GroupNotFoundException e) {
-				System.out.println("Grupo não encontrado!");
+				try {
+					outStream.writeUTF("Grupo nao encontrado");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			} catch (UserNotOwnerException e) {
-				System.out.println("Utilizador logado não é dono do grupo!");
+				try {
+					outStream.writeUTF("Utilizador nao e dono do grupo!");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			} catch (UserAlreadyInGroupException e) {
-				System.out.println("Utilizador já no grupo!");
+				try {
+					outStream.writeUTF("Utilizador ja pertence ao grupo!");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			} catch (RequestNotFoundException e) {
-				System.out.println("Pedido não encontrado!");
+				try {
+					outStream.writeUTF("Pedido nao encontrado!");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			} catch (UserNotRequesteeException e) {
-				System.out.println("identificador referente a um pagamento pedido a outro cliente");
+				try {
+					outStream.writeUTF("identificador referente a um pagamento pedido a outro cliente!");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			} catch (QRCodeNotFoundException e) {
-				System.out.println("QRCode não existente");
+				try {
+					outStream.writeUTF("QRCode nao existente!");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				e.printStackTrace();
 			}
 		}
