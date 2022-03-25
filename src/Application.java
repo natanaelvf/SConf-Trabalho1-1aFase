@@ -25,7 +25,7 @@ import objects.User;
 public class Application {
 	
 
-	public Database database;
+	public Database database= new Database();
 	public User loggedUser;
 
 	/**
