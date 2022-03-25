@@ -25,75 +25,74 @@ import objects.Group;
 import objects.Request;
 import objects.User;
 
-
 public class TrokoServer {
 
-	public static Application app;
-	
+	public static Application app = new Application();
+
 	public static void main(String[] args) throws IOException, IllegalArgumentNumberException {
-        if (args.length > 1) {
-            throw new IllegalArgumentNumberException("Demasiados args passados ao servidor!");
-        }
-        int serverPort = 45678;
-        if (args[0] != null) {
-            serverPort = Integer.parseInt(args[0]);
-        }
-        app = new Application();
-        Database database = new Database();
-        
-        User user1 = new User(100000001, 1000.00, new HashSet<Request>());
-        User user2 = new User(100000002, 2000.00, new HashSet<Request>());
-        User user3 = new User(100000003, 3000.00, new HashSet<Request>());
-        
-        Request request = new Request(100000001, 125.00, 100000003);
-        user1.addRequest(request);
-        request = new Request(100000002, 250.00, 100000002);
-        user1.addRequest(request);
-        request = new Request(100000003, 250.00, 100000002);
-        user3.addRequest(request);
-        
-        database.addUser(user1);
-        database.addUser(user2);
-        database.addUser(user3);
-        
-        HashSet<User> users = new HashSet<>();
-        users.add(user1);
-        users.add(user2);
-        users.add(user3);
-        
-        Group group = new Group(100000001, user1, users);
-        
-        database.addGroup(group);
-        
-        app.database = database;
-        
-        TrokoServer server = new TrokoServer();
-        server.startServer(serverPort);
-    }
+
+		if (args.length > 1) {
+			throw new IllegalArgumentNumberException("Demasiados args passados ao servidor!");
+		}
+		int serverPort = 45678;
+		if (args[0] != null) {
+			serverPort = Integer.parseInt(args[0]);
+		}
+		app = new Application();
+		Database database = new Database();
+
+		User user1 = new User(100000001, 1000.00, new HashSet<>());
+		User user2 = new User(100000002, 2000.00, new HashSet<>());
+		User user3 = new User(100000003, 3000.00, new HashSet<>());
+
+		Request request = new Request(100000001, 125.00, 100000003);
+		user1.addRequest(request);
+		request = new Request(100000002, 250.00, 100000002);
+		user1.addRequest(request);
+		request = new Request(100000003, 250.00, 100000002);
+		user3.addRequest(request);
+
+		database.addUser(user1);
+		database.addUser(user2);
+		database.addUser(user3);
+
+		HashSet<User> users = new HashSet<>();
+		users.add(user1);
+		users.add(user2);
+		users.add(user3);
+
+		Group group = new Group(100000001, user1, users);
+
+		database.addGroup(group);
+
+		app.database = database;
+
+		TrokoServer server = new TrokoServer();
+		server.startServer(serverPort);
+	}
 
 	public void startServer(int port) throws IOException {
-        ServerSocket sSoc = null;
+		ServerSocket sSoc = null;
 
-        try {
-            sSoc = new ServerSocket(port);
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-            System.exit(-1);
-        }
+		try {
+			sSoc = new ServerSocket(port);
+		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			System.exit(-1);
+		}
 
-        while(true) {
-            try {
-                Socket inSoc = sSoc.accept();
-                ServerThread newServerThread = new ServerThread(inSoc);
-                newServerThread.start();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                sSoc.close();
-            }
-        }
-    }
-
+		while (true) {
+			try {
+				Socket inSoc = sSoc.accept();
+				ServerThread newServerThread = new ServerThread(inSoc);
+				newServerThread.start();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				sSoc.close();
+			}
+		}
+	}
 
 	private class ServerThread extends Thread {
 
@@ -104,7 +103,7 @@ public class TrokoServer {
 		}
 
 		public void run() {
-			ObjectOutputStream outStream =  null;
+			ObjectOutputStream outStream = null;
 			try {
 				outStream = new ObjectOutputStream(socket.getOutputStream());
 				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
@@ -113,63 +112,104 @@ public class TrokoServer {
 				String passwd = null;
 
 				try {
-					user = (int)inStream.readObject();
-					passwd = (String)inStream.readObject();
+					user = (int) inStream.readObject();
+					passwd = (String) inStream.readObject();
 				} catch (ClassNotFoundException e1) {
 					e1.printStackTrace();
 				}
 
-				if (authenticateUser(user,passwd)){
+				if (authenticateUser(user, passwd)) {
 					outStream.writeUTF("LOGGED");
 				}
-				//if (database.Users exists)
-		        User user2 = new User(user, 2000.00, new HashSet<Request>());
-				
-				String input = (String)inStream.readObject();
-				
-				while (input != "quit" || input != "q" ) {
-					
-					input = (String)inStream.readObject();
-					String [] data= input.split(" ");
-					switch(data[0]) {
-					case "b": case "balance":
-						outStream.writeDouble(app.viewBalance());
+				// if (database.Users exists)
+				User user2 = new User(user, 2000.00, new HashSet<Request>());
+
+				String input = (String) inStream.readObject();
+
+				while (input != "quit" || input != "q") {
+
+					input = (String) inStream.readObject();
+					String[] data = input.split(" ");
+					double amount;
+					switch (data[0]) {
+					case "b":
+					case "balance":
+						outStream.writeUTF("Your balance is: " + app.viewBalance());
 						break;
-					case "p": case "makepay":
-						app.makePayment(user, Double.parseDouble(data[1]));
+					case "p":
+					case "makepay":
+						amount = Double.parseDouble(data[1]);
+						app.makePayment(user, amount);
+						outStream.writeUTF("Paid " + amount + " to user" + user + "\n");
 						break;
-					case "r": case "requestpayment":
-						app.requestPayment(user, Double.parseDouble(data[1]));
+					case "r":
+					case "requestpayment":
+						amount = Double.parseDouble(data[1]);
+						app.requestPayment(user, amount);
+						outStream.writeUTF("Requested " + amount + " to user" + user + "\n");
 						break;
-					case "v": case "view":
-						app.viewRequests();
+					case "v":
+					case "view":
+						outStream.writeUTF("Your requests are: ");
+						for (Request request : app.viewRequests()) {
+							outStream.writeUTF(request.toString() + "\n");
+						}
+						;
 						break;
-					case "o": case "obtain":
-						app.obtainQRcode(Double.parseDouble(data[1]));
+					case "o":
+					case "obtain":
+						double code = Double.parseDouble(data[1]);
+						outStream.writeUTF("Your code has ID: " + code);
+						app.obtainQRcode(code);
 						break;
-					case "c": case "confirm":
+					case "c":
+					case "confirm":
 						app.confirmQRcode(app.database.getQRCodeByID(Integer.parseInt(data[1])));
 						break;
-					case "n": case "newgroup":
-						app.newGroup(Integer.parseInt(data[1]));
+					case "n":
+					case "newgroup":
+						int groupID = Integer.parseInt(data[1]);
+						app.newGroup(groupID);
+						outStream.writeUTF("New group created with ID: " + groupID);
 						break;
-					case "a": case "addu":
-						app.addUserToGroup(user, Integer.parseInt(data[1]));
+					case "a":
+					case "addu":
+						int groupToAddUser = Integer.parseInt(data[1]);
+						int userToAdd = Integer.parseInt(data[2]);
+						app.addUserToGroup(groupToAddUser, userToAdd);
+						outStream.writeUTF("Added user: " + userToAdd + " to group" + groupToAddUser);
 						break;
-					case "g": case "groups":
-						app.viewGroups();
+					case "g":
+					case "groups":
+						HashSet<Group>[] groups = app.viewGroups();
+						outStream.writeUTF("User owns the following groups: ");
+						for (Group group : groups[0]) {
+							outStream.writeUTF(group.toString());
+						}
+						outStream.writeUTF("User is in the following groups: ");
+						for (Group group : groups[1]) {
+							outStream.writeUTF(group.toString());
+						}
 						break;
-					case "s": case "status":
-						app.statusPayments(Integer.parseInt(data[1]));
+					case "s":
+					case "status":
+						int groupToCheck = Integer.parseInt(data[1]);
+						outStream.writeUTF(
+								"The following requests for the group" + groupToCheck + " are still to be paid: ");
+						outStream.writeUTF(app.statusPayments(groupToCheck));
 						break;
-					case "h": case "history":
-						app.viewHistory(Integer.parseInt(data[1]));
+					case "h":
+					case "history":
+						outStream.writeUTF(app.viewHistory(Integer.parseInt(data[1])));
 						break;
-					case "pay" : case "payrequest":
-						app.payRequest(Integer.parseInt(data[1]));
+					case "pay":
+					case "payrequest":
+						int requestId = Integer.parseInt(data[1]);
+						outStream.writeUTF("The request with ID: " + requestId + " will be paid");
+						app.payRequest(requestId);
 						break;
-					default :
-						
+					default:
+						outStream.writeUTF("Invalid request!");
 					}
 				}
 
@@ -249,7 +289,6 @@ public class TrokoServer {
 		}
 	}
 
-
 	private boolean authenticateUser(int user, String passwd) {
 		try {
 			File myObj = new File("../auth.txt");
@@ -257,7 +296,7 @@ public class TrokoServer {
 			while (myReader.hasNextLine()) {
 				int data1 = myReader.nextInt();
 				String[] data = myReader.nextLine().split(".");
-				if (data1==user && data[1] == passwd) {
+				if (data1 == user && data[1] == passwd) {
 					myReader.close();
 					return true;
 				}

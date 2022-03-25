@@ -59,11 +59,22 @@ public class Group {
 
 	public void addRequestListToHistory(HashSet<Request> requests) {
 		this.requestListHistory.add(requests);
-		
+
 	}
 
 	public ArrayList<HashSet<Request>> getHistory() {
 		return this.requestListHistory;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Group ID: " + this.groupID + "\n");
+		sb.append("Group Owner: " + this.owner.getID() + "\n");
+		sb.append("Request List: " + "\n");
+		for (Request request: this.requestList) {
+			sb.append(request.toString() + "\n");
+		}
+		return sb.toString();
+	}
 }

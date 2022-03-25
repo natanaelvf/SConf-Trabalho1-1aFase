@@ -17,17 +17,19 @@ import objects.User;
 
 public class Trokos {
 
-	 static DataInputStream in;
-	 static DataOutputStream out;
-	 static ServerSocket clientSocket;
-	 static Application app = TrokoServer.app;
+	static DataInputStream in;
+	static DataOutputStream out;
+	static ServerSocket clientSocket;
+	static Application app = TrokoServer.app;
 
-	public static void main(String[] args) throws IllegalArgumentNumberException, NumberFormatException, InvalidUserIdException, InvalidPasswordException, IOException, ClassNotFoundException {
+	public static void main(String[] args) throws IllegalArgumentNumberException, NumberFormatException,
+			InvalidUserIdException, InvalidPasswordException, IOException, ClassNotFoundException {
 
 		if (args.length > 3) {
 			throw new IllegalArgumentNumberException("Demasiados args passados ao cliente!");
 		}
-		String serverAdress = args[0];
+		String serverAdress = args[0].split(":")[0];
+		int serverPort = Integer.parseInt(args[0].split(":")[1]);
 		int userId = Integer.parseInt(args[1]);
 		String password = args[2];
 
@@ -39,9 +41,9 @@ public class Trokos {
 			throw new InvalidPasswordException("Uma password deve ter entre 6 e 20 characteres,"
 					+ " dos quais: dois digitos, duas letras maiusculas!");
 		}
-		
+
 		User user = TrokoServer.app.database.getUserByID(userId);
-		
+
 		if (user != null) {
 			app.setLoggedUser(user);
 		} else {
@@ -49,7 +51,7 @@ public class Trokos {
 			app.setLoggedUser(newUser);
 		}
 
-		clientSocket =new ServerSocket(45678, 0, InetAddress.getByName("localhost"));
+		clientSocket = new ServerSocket(serverPort, 0, InetAddress.getByName("localhost"));
 		Socket socket = clientSocket.accept();
 		in = new DataInputStream(socket.getInputStream());
 		out = new DataOutputStream(socket.getOutputStream());
@@ -61,9 +63,7 @@ public class Trokos {
 		client.startClient(serverAdress);
 	}
 
-
 	private void startClient(String serverAdress) throws IOException, ClassNotFoundException {
-
 
 		Scanner sc = new Scanner(System.in);
 		String userInput = sc.nextLine();
@@ -83,23 +83,25 @@ public class Trokos {
 		clientSocket.close();
 	}
 
-
 	public static boolean isValidPassowrd(String password) {
 
-        if (password.length() > 16 || password.length() < 6) return false;
+		if (password.length() > 16 || password.length() < 6)
+			return false;
 
-        int charCount = 0;
-        int numCount = 0;
-        for (int i = 0; i < password.length(); i++) {
+		int charCount = 0;
+		int numCount = 0;
+		for (int i = 0; i < password.length(); i++) {
 
-            char ch = password.charAt(i);
+			char ch = password.charAt(i);
 
-            if (ch >= '0' && ch <= '9')  numCount++;
-            else if (Character.toUpperCase(ch) >= 'A' && Character.toUpperCase(ch) <= 'Z') charCount++;
-            else return false;
-        }
+			if (ch >= '0' && ch <= '9')
+				numCount++;
+			else if (Character.toUpperCase(ch) >= 'A' && Character.toUpperCase(ch) <= 'Z')
+				charCount++;
+			else
+				return false;
+		}
 
-
-        return (charCount >= 2 && numCount >= 2);
-    }
+		return (charCount >= 2 && numCount >= 2);
+	}
 }

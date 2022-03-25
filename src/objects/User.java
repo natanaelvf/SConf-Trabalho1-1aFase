@@ -2,7 +2,7 @@ package objects;
 
 import java.util.HashSet;
 
-public class User {	
+public class User {
 	private int userID;
 	private double balance;
 	private HashSet<Request> requests;

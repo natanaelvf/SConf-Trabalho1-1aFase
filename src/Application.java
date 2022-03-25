@@ -24,9 +24,8 @@ import objects.Request;
 import objects.User;
 
 public class Application {
-	
 
-	public Database database= new Database();
+	public Database database = new Database();
 	public User loggedUser;
 
 	/**
@@ -124,62 +123,65 @@ public class Application {
 			throw new UserNotRequesteeException(
 					"Erro ao autorizar o pagamento: identificador referente" + "a um pagamento pedido a outro cliente");
 		}
-		int id =request.getUserID();
-		User user= this.database.getUserByID(id);
-		double currentbalance= user.getBalance();
-		double newbalance=currentbalance-request.getAmount();
+		int id = request.getUserID();
+		User user = this.database.getUserByID(id);
+		double currentbalance = user.getBalance();
+		double newbalance = currentbalance - request.getAmount();
 		user.setBalance(newbalance);
 		this.database.removeRequest(request);
 		this.loggedUser.removeRequest(request);
 	}
-	/** 
-	 * Cria um pedido de pagamento no servidor e coloca o
-	 * numa lista de pagamentos identificados por QR code.
+
+	/**
+	 * Cria um pedido de pagamento no servidor e coloca o numa lista de pagamentos
+	 * identificados por QR code.
 	 * 
 	 * @param amount o amount a pagar
 	 * 
-	 * @throws IOException 
-	 * @throws WriterException 
+	 * @throws IOException
+	 * @throws WriterException
 	 */
 
 	public void obtainQRcode(double amount) throws WriterException, IOException {
-		QRCode qrCode = new QRCode(this.database.getUniqueQRCodeID(), amount , this.loggedUser.getID());
+		QRCode qrCode = new QRCode(this.database.getUniqueQRCodeID(), amount, this.loggedUser.getID());
 		Request request = new Request(this.database.getUniqueRequestID(), amount, this.loggedUser.getID());
 		request.setQRCode(qrCode);
 		this.loggedUser.addRequest(request);
 		int id = qrCode.getID();
-		String str = ""+id;
-		String path = "..\\qrcodes\\qrCode"+qrCode.getID()+".png";
+		String str = "" + id;
+		String path = "..\\qrcodes\\qrCode" + qrCode.getID() + ".png";
 		String charset = "UTF-8";
 		QRCode.generateQRcode(str, Paths.get(path), charset, 200, 200);
 		System.out.println("QR Code created successfully.");
 	}
 
-	/** 
-	 * Confirma e autoriza o pagamento identificado por
-	 * QR code, removendo o pedido da lista mantida pelo servidor. Se o cliente nao
-	 * tiver saldo suficiente na conta, deve ser retornado um erro (mas o pedido
-	 * continua a ser removido da lista). Se o pedido identificado por QR code nao
-	 * existir tambem deve retornar um erro. " TODO
-	 * @throws UserNotRequesteeException 
-	 * @throws RequestNotFoundException 
+	/**
+	 * Confirma e autoriza o pagamento identificado por QR code, removendo o pedido
+	 * da lista mantida pelo servidor. Se o cliente nao tiver saldo suficiente na
+	 * conta, deve ser retornado um erro (mas o pedido continua a ser removido da
+	 * lista). Se o pedido identificado por QR code nao existir tambem deve retornar
+	 * um erro. " TODO
+	 * 
+	 * @throws UserNotRequesteeException
+	 * @throws RequestNotFoundException
 	 */
-	public void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException, RequestNotFoundException, UserNotRequesteeException{
+	public void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException,
+			RequestNotFoundException, UserNotRequesteeException {
 		this.database.getQRCodeByID(qrCode.getID());
 		HashSet<Request> requests = loggedUser.getRequests();
-		for(Request request: requests) {
-			if(request.getQRCode().getID()==qrCode.getID()) {
-				int userID= request.getUserID();
-				User user= database.getUserByID(userID);
-				if(user.getBalance()<qrCode.getAmount()) {
-					throw new InsuficientFundsException(
-						"O utilizador não tem saldo suficiente para esta transição");
+		for (Request request : requests) {
+			if (request.getQRCode().getID() == qrCode.getID()) {
+				int userID = request.getUserID();
+				User user = database.getUserByID(userID);
+				if (user.getBalance() < qrCode.getAmount()) {
+					throw new InsuficientFundsException("O utilizador não tem saldo suficiente para esta transição");
 				}
-			payRequest(request.getID());		
+				payRequest(request.getID());
 			}
 		}
 		throw new QRCodeNotFoundException("QRCode não existente");
 	}
+
 	/**
 	 * Cria um grupo para pagamentos partilhados, cujo dono (owner) e o cliente que
 	 * o criou
@@ -302,7 +304,8 @@ public class Application {
 	 * @throws GroupNotFoundException se o grupo nao existir
 	 * @throws UserNotOwner           se o utilizador logado nao for dono do grupo
 	 */
-	public void statusPayments(int groupID) throws GroupNotFoundException, UserNotOwnerException {
+	public String statusPayments(int groupID) throws GroupNotFoundException, UserNotOwnerException {
+		StringBuilder requests = new StringBuilder();
 		Group group = this.database.getGroupByID(groupID);
 		if (group == null) {
 			throw new GroupNotFoundException(
@@ -311,11 +314,12 @@ public class Application {
 		if (group.getOwner().getID() != this.loggedUser.getID()) {
 			throw new UserNotOwnerException(
 					"Erro ao mostrar um pedido de pagamento de grupo: o utilizador nao e dono do grupo " + groupID
-					+ "!");
+							+ "!");
 		}
 		for (Request request : group.getRequestList()) {
-			System.out.println(request.toString());
+			requests.append(request.toString() + "\n");
 		}
+		return requests.toString();
 	}
 
 	/**
@@ -327,8 +331,9 @@ public class Application {
 	 * @throws UserNotOwnerException  se o utilizador logado nao for dono do grupo
 	 * 
 	 */
-	public void viewHistory(int groupID) throws GroupNotFoundException, UserNotOwnerException {
+	public String viewHistory(int groupID) throws GroupNotFoundException, UserNotOwnerException {
 		Group group = this.database.getGroupByID(groupID);
+		StringBuilder result = new StringBuilder();
 		if (group == null) {
 			throw new GroupNotFoundException(
 					"Erro ao mostrar o historico dos pagamentos do grupo: grupo " + groupID + " nao existente!");
@@ -341,9 +346,10 @@ public class Application {
 		ArrayList<HashSet<Request>> history = group.getHistory();
 		for (HashSet<Request> requests : history) {
 			for (Request request : requests) {
-				System.out.print(request.toString());
+				result.append(request.toString() + "\n");
 			}
 		}
+		return result.toString();
 	}
 
 	public void setLoggedUser(User user) {
