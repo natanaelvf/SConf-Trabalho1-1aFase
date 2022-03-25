@@ -174,12 +174,12 @@ public class Application {
 				int userID = request.getUserID();
 				User user = database.getUserByID(userID);
 				if (user.getBalance() < qrCode.getAmount()) {
-					throw new InsuficientFundsException("O utilizador não tem saldo suficiente para esta transição");
+					throw new InsuficientFundsException("O utilizador nï¿½o tem saldo suficiente para esta transiï¿½ï¿½o");
 				}
 				payRequest(request.getID());
 			}
 		}
-		throw new QRCodeNotFoundException("QRCode não existente");
+		throw new QRCodeNotFoundException("QRCode nï¿½o existente");
 	}
 
 	/**

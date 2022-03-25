@@ -50,7 +50,6 @@ public class Trokos {
 			User newUser = new User(app.database.getUniqueQRCodeID(), 100.00, new HashSet<Request>());
 			app.setLoggedUser(newUser);
 		}
-
 		clientSocket = new ServerSocket(serverPort, 0, InetAddress.getByName("localhost"));
 		Socket socket = clientSocket.accept();
 		in = new DataInputStream(socket.getInputStream());

@@ -28,7 +28,6 @@ import objects.User;
 public class TrokoServer {
 
 	public static Application app = new Application();
-
 	public static void main(String[] args) throws IOException, IllegalArgumentNumberException {
 
 		if (args.length > 1) {
@@ -51,7 +50,6 @@ public class TrokoServer {
 		user1.addRequest(request);
 		request = new Request(100000003, 250.00, 100000002);
 		user3.addRequest(request);
-
 		database.addUser(user1);
 		database.addUser(user2);
 		database.addUser(user3);
@@ -121,7 +119,6 @@ public class TrokoServer {
 				if (authenticateUser(user, passwd)) {
 					outStream.writeUTF("LOGGED");
 				}
-				// if (database.Users exists)
 				User user2 = new User(user, 2000.00, new HashSet<Request>());
 
 				String input = (String) inStream.readObject();
@@ -142,22 +139,13 @@ public class TrokoServer {
 						app.makePayment(user, amount);
 						outStream.writeUTF("Paid " + amount + " to user" + user + "\n");
 						break;
-					case "r":
-					case "requestpayment":
-						amount = Double.parseDouble(data[1]);
-						app.requestPayment(user, amount);
-						outStream.writeUTF("Requested " + amount + " to user" + user + "\n");
-						break;
-					case "v":
-					case "view":
+					case "v": case "view":
 						outStream.writeUTF("Your requests are: ");
-						for (Request request : app.viewRequests()) {
+						for(Request request : app.viewRequests()) {
 							outStream.writeUTF(request.toString() + "\n");
-						}
-						
+						};
 						break;
-					case "o":
-					case "obtain":
+					case "o": case "obtain":
 						double code = Double.parseDouble(data[1]);
 						outStream.writeUTF("Your code has ID: " + code);
 						app.obtainQRcode(code);
@@ -172,8 +160,7 @@ public class TrokoServer {
 						app.newGroup(groupID);
 						outStream.writeUTF("New group created with ID: " + groupID);
 						break;
-					case "a":
-					case "addu":
+					case "a": case "addu":
 						int groupToAddUser = Integer.parseInt(data[1]);
 						int userToAdd = Integer.parseInt(data[2]);
 						app.addUserToGroup(groupToAddUser, userToAdd);
