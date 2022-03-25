@@ -1,10 +1,6 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -17,10 +13,10 @@ import objects.User;
 
 public class Trokos {
 
-	static DataInputStream in;
-	static DataOutputStream out;
-	static ServerSocket clientSocket;
 	static Application app = TrokoServer.app;
+	static ObjectOutputStream outStream;
+	static ObjectInputStream  inStream;
+	static Socket clientSocket;
 
 	public static void main(String[] args) throws IllegalArgumentNumberException, NumberFormatException,
 			InvalidUserIdException, InvalidPasswordException, IOException, ClassNotFoundException {
@@ -50,13 +46,15 @@ public class Trokos {
 			User newUser = new User(app.database.getUniqueQRCodeID(), 100.00, new HashSet<Request>());
 			app.setLoggedUser(newUser);
 		}
-		clientSocket = new ServerSocket(serverPort, 0, InetAddress.getByName("localhost"));
-		Socket socket = clientSocket.accept();
-		in = new DataInputStream(socket.getInputStream());
-		out = new DataOutputStream(socket.getOutputStream());
-
-		out.writeInt(userId);
-		out.writeUTF(password);
+		System.out.println("Trying to write to port: " + serverPort);
+		clientSocket = new Socket(serverAdress, serverPort);
+		outStream = new ObjectOutputStream(clientSocket.getOutputStream());
+		inStream = new ObjectInputStream(clientSocket.getInputStream());
+		
+		System.out.println("Writing userId" + userId);
+		outStream.writeUTF(userId+"");
+		System.out.println("Writing password" + password);
+		outStream.writeUTF(password);
 
 		Trokos client = new Trokos();
 		client.startClient(serverAdress);
@@ -65,21 +63,50 @@ public class Trokos {
 	private void startClient(String serverAdress) throws IOException, ClassNotFoundException {
 
 		Scanner sc = new Scanner(System.in);
+		printHelp();
 		String userInput = sc.nextLine();
 
+
 		while (userInput != "quit" || userInput != "q") {
-			out.writeUTF("imprima o que desejar");
-			out.writeUTF(userInput);
-			String fromServer = (String) in.readUTF();
-			System.out.println(fromServer);
+			if (userInput != "help") {
+				outStream.writeUTF(userInput);
+				String fromServer = inStream.readUTF();
+				System.out.println(fromServer);
+			} else {
+				printHelp();
+			}
 			userInput = sc.nextLine();
 		}
-		sc.close();
-
-		out.close();
-		in.close();
-
+		
 		clientSocket.close();
+		sc.close();
+		outStream.close();
+	}
+
+	private void printHelp() {
+		System.out.println("Insira um comando!");
+		System.out.println("(b)alance – obtem valor atual do saldo da sua conta");
+		System.out.println("(m)akepayment <userID> <amount> – transfere o valor amount da sua conta de clientID para a"
+				+ "conta de userID");
+		System.out.println("(r)equestpayment <userID> <amount> – envia um pedido de pagamento ao utilizador"
+				+ "userID, de valor amount");
+		System.out.println("(v)iewrequests – obtem do servidor a sua lista de pedidos de pagamentos pendentes");
+		System.out.println("(p)ayrequest <reqID> – autoriza o pagamento do pedido com identificador reqID, "
+				+ " removendo o pedido da lista de pagamentos pendentes");
+		System.out.println("(o)btainQRcode <amount> – cria um pedido de pagamento no servidor e coloca-o numa"
+				+ " lista de pagamentos identificados por QR code");
+		System.out.println("(c)onfirmQRcode <QRcode> – confirma e autoriza o pagamento identificado por QR code, "
+				+ "removendo o pedido da lista mantida pelo servidor");
+		System.out.println("(n)ewgroup <groupID> – cria um grupo para pagamentos partilhados, cujo dono (owner)"
+				+ "será o cliente que o criou");
+		System.out.println("(a)ddu <userID> <groupID> – adiciona o utilizador userID como membro do grupo indicado.");
+		System.out.println("(g)roups – mostra uma lista dos grupos de que o cliente é dono, e uma lista dos grupos a "
+				+ "que pertence");
+		System.out.println("(d)ividepayment <groupID> <amount> – cria um pedido de pagamento de grupo, cujo valor "
+				+ "total amount deve ser dividido pelos membros do grupo groupID");
+		System.out.println("(s)tatuspayments <groupID> – mostra o estado de cada pedido de pagamento de grupo, ou\r\n"
+				+ "seja, que membros de grupo ainda não pagaram esse pedido");
+		System.out.println("(h)istory <groupID> – mostra o histórico dos pagamentos do grupo groupID já concluídos");
 	}
 
 	public static boolean isValidPassowrd(String password) {

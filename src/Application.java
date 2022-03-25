@@ -3,7 +3,6 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 
 import com.google.zxing.WriterException;
 
@@ -174,7 +173,8 @@ public class Application {
 				int userID = request.getUserID();
 				User user = database.getUserByID(userID);
 				if (user.getBalance() < qrCode.getAmount()) {
-					throw new InsuficientFundsException("O utilizador n�o tem saldo suficiente para esta transi��o");
+					throw new InsuficientFundsException(
+							"O utilizador n�o tem saldo suficiente para esta transi��o");
 				}
 				payRequest(request.getID());
 			}
