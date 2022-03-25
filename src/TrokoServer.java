@@ -154,7 +154,7 @@ public class TrokoServer {
 						for (Request request : app.viewRequests()) {
 							outStream.writeUTF(request.toString() + "\n");
 						}
-						;
+						
 						break;
 					case "o":
 					case "obtain":
