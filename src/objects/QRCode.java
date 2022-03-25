@@ -24,6 +24,10 @@ public class QRCode{
    public int getID(){
        return id;
    }
+   
+   public double getAmount() {
+	   return amount;
+   }
       
    public static void generateQRcode(String data, Path path, String charset, int h, int w) throws WriterException, IOException  
    { 

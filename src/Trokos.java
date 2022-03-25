@@ -49,7 +49,7 @@ public class Trokos {
 			app.setLoggedUser(newUser);
 		}
 
-		clientSocket =new ServerSocket(9090, 0, InetAddress.getByName("localhost"));
+		clientSocket =new ServerSocket(45678, 0, InetAddress.getByName("localhost"));
 		Socket socket = clientSocket.accept();
 		in = new DataInputStream(socket.getInputStream());
 		out = new DataOutputStream(socket.getOutputStream());

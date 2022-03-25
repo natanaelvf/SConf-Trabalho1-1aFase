@@ -11,10 +11,10 @@ public class Group {
 	private HashSet<Request> requestList;
 	private ArrayList<HashSet<Request>> requestListHistory;
 
-	public Group(int groupID, User loggedUser) {
+	public Group(int groupID, User loggedUser, HashSet<User> users) {
 		this.setGroupID(groupID);
 		this.setOwner(loggedUser);
-		this.setUserList(new HashSet<User>());
+		this.setUserList(users);
 	}
 
 	public int getGroupID() {

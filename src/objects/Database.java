@@ -32,6 +32,10 @@ public class Database {
 		}
 		return null;
 	}
+	public void addUser(User user) {
+        this.userBase.put(user.getID(), user);
+
+    }
 	
 	public int getUniqueRequestID() {
 		int id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);

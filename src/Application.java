@@ -3,6 +3,7 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 
 import com.google.zxing.WriterException;
 
@@ -123,7 +124,11 @@ public class Application {
 			throw new UserNotRequesteeException(
 					"Erro ao autorizar o pagamento: identificador referente" + "a um pagamento pedido a outro cliente");
 		}
-
+		int id =request.getUserID();
+		User user= this.database.getUserByID(id);
+		double currentbalance= user.getBalance();
+		double newbalance=currentbalance-request.getAmount();
+		user.setBalance(newbalance);
 		this.database.removeRequest(request);
 		this.loggedUser.removeRequest(request);
 	}
@@ -142,8 +147,8 @@ public class Application {
 		Request request = new Request(this.database.getUniqueRequestID(), amount, this.loggedUser.getID());
 		request.setQRCode(qrCode);
 		this.loggedUser.addRequest(request);
-
-		String str = "THE HABIT OF PERSISTENCE IS THE HABIT OF VICTORY.";
+		int id = qrCode.getID();
+		String str = ""+id;
 		String path = "..\\qrcodes\\qrCode"+qrCode.getID()+".png";
 		String charset = "UTF-8";
 		QRCode.generateQRcode(str, Paths.get(path), charset, 200, 200);
@@ -156,10 +161,24 @@ public class Application {
 	 * tiver saldo suficiente na conta, deve ser retornado um erro (mas o pedido
 	 * continua a ser removido da lista). Se o pedido identificado por QR code nao
 	 * existir tambem deve retornar um erro. " TODO
+	 * @throws UserNotRequesteeException 
+	 * @throws RequestNotFoundException 
 	 */
-	public void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException{
+	public void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException, RequestNotFoundException, UserNotRequesteeException{
 		this.database.getQRCodeByID(qrCode.getID());
-		// TODO payRequest(requestID);
+		HashSet<Request> requests = loggedUser.getRequests();
+		for(Request request: requests) {
+			if(request.getQRCode().getID()==qrCode.getID()) {
+				int userID= request.getUserID();
+				User user= database.getUserByID(userID);
+				if(user.getBalance()<qrCode.getAmount()) {
+					throw new InsuficientFundsException(
+						"O utilizador não tem saldo suficiente para esta transição");
+				}
+			payRequest(request.getID());		
+			}
+		}
+		throw new QRCodeNotFoundException("QRCode não existente");
 	}
 	/**
 	 * Cria um grupo para pagamentos partilhados, cujo dono (owner) e o cliente que
@@ -173,7 +192,7 @@ public class Application {
 			throw new GroupAleadyExistsException(
 					"Erro ao criar o grupo com id " + groupID + " : um grupo com esse id ja existe!");
 		}
-		Group group = new Group(groupID, this.loggedUser);
+		Group group = new Group(groupID, this.loggedUser, new HashSet<User>());
 		this.database.addGroup(group);
 	}
 
