@@ -6,75 +6,90 @@ import java.util.HashSet;
 public class Group {
 
 	private int groupID;
-	private User owner;
-	private HashSet<User> userList;
+	private int ownerUser;
+	private HashSet<Integer> userList;
 	private HashSet<Request> requestList;
 	private ArrayList<HashSet<Request>> requestListHistory;
 
-	public Group(int groupID, User loggedUser, HashSet<User> users) {
-		this.setGroupID(groupID);
-		this.setOwner(loggedUser);
-		this.setUserList(users);
+	public Group(int groupID, int ownerUser, HashSet<Integer> userList) {
+		this.groupID = groupID;
+		this.ownerUser = ownerUser;
+		this.userList = userList;
 	}
 
 	public int getGroupID() {
 		return groupID;
 	}
 
+
 	public void setGroupID(int groupID) {
 		this.groupID = groupID;
 	}
 
-	public User getOwner() {
-		return owner;
+
+	public int getOwnerUser() {
+		return ownerUser;
 	}
 
-	public void setOwner(User owner) {
-		this.owner = owner;
+
+	public void setOwnerUser(int ownerUser) {
+		this.ownerUser = ownerUser;
 	}
 
-	public HashSet<User> getUserList() {
+
+	public HashSet<Integer> getUserList() {
 		return userList;
 	}
 
-	public void setUserList(HashSet<User> userList) {
+
+	public void setUserList(HashSet<Integer> userList) {
 		this.userList = userList;
 	}
 
-	public void addUser(User user) {
-		this.userList.add(user);
-	}
-
-	public void addRequest(Request request) {
-		this.requestList.add(request);
-	}
 
 	public HashSet<Request> getRequestList() {
 		return requestList;
 	}
 
+
 	public void setRequestList(HashSet<Request> requestList) {
 		this.requestList = requestList;
 	}
 
-	public void addRequestListToHistory(HashSet<Request> requests) {
-		this.requestListHistory.add(requests);
 
+	public ArrayList<HashSet<Request>> getRequestListHistory() {
+		return requestListHistory;
 	}
 
-	public ArrayList<HashSet<Request>> getHistory() {
-		return this.requestListHistory;
+
+	public void setRequestListHistory(ArrayList<HashSet<Request>> requestListHistory) {
+		this.requestListHistory = requestListHistory;
 	}
+
 
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Group ID: " + this.groupID + "\n");
-		sb.append("Group Owner: " + this.owner.getID() + "\n");
+		sb.append("Group Owner: " + ownerUser + "\n");
 		sb.append("Request List: " + "\n");
 		for (Request request: this.requestList) {
 			sb.append(request.toString() + "\n");
 		}
 		return sb.toString();
+	}
+
+	public void addUser(User userByID) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void addRequest(Request request) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void addRequestListToHistory(HashSet<Request> requests) {
+		// TODO Auto-generated method stub
 	}
 }

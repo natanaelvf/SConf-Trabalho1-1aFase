@@ -50,11 +50,9 @@ public class Trokos {
 		clientSocket = new Socket(serverAdress, serverPort);
 		outStream = new ObjectOutputStream(clientSocket.getOutputStream());
 		inStream = new ObjectInputStream(clientSocket.getInputStream());
-		
-		System.out.println("Writing userId" + userId);
-		outStream.writeUTF(userId+"");
-		System.out.println("Writing password" + password);
-		outStream.writeUTF(password);
+
+		outStream.writeObject(userId+"");
+		outStream.writeObject(password);
 
 		Trokos client = new Trokos();
 		client.startClient(serverAdress);
@@ -67,24 +65,21 @@ public class Trokos {
 		String userInput = sc.nextLine();
 
 
-		while (userInput != "quit" || userInput != "q") {
+		while (userInput != "quit") {
 			if (userInput != "help") {
-				outStream.writeUTF(userInput);
-				String fromServer = inStream.readUTF();
+				outStream.writeObject(userInput);
+				String fromServer = (String) inStream.readObject();
 				System.out.println(fromServer);
 			} else {
 				printHelp();
 			}
 			userInput = sc.nextLine();
 		}
-		
-		clientSocket.close();
+		System.out.println("Thank you for playing!");
 		sc.close();
-		outStream.close();
 	}
 
 	private void printHelp() {
-		System.out.println("Insira um comando!");
 		System.out.println("(b)alance – obtem valor atual do saldo da sua conta");
 		System.out.println("(m)akepayment <userID> <amount> – transfere o valor amount da sua conta de clientID para a"
 				+ "conta de userID");
@@ -107,6 +102,7 @@ public class Trokos {
 		System.out.println("(s)tatuspayments <groupID> – mostra o estado de cada pedido de pagamento de grupo, ou\r\n"
 				+ "seja, que membros de grupo ainda não pagaram esse pedido");
 		System.out.println("(h)istory <groupID> – mostra o histórico dos pagamentos do grupo groupID já concluídos");
+		System.out.println("Insira um comando!");
 	}
 
 	public static boolean isValidPassowrd(String password) {

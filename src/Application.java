@@ -1,8 +1,11 @@
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Scanner;
 
 import com.google.zxing.WriterException;
 
@@ -24,8 +27,8 @@ import objects.User;
 
 public class Application {
 
-	public Database database = new Database();
-	public User loggedUser;
+	public Database database;
+	private User loggedUser;
 
 	/**
 	 * Obtem valor atual do saldo da sua conta.
@@ -45,8 +48,9 @@ public class Application {
 	 * @throws InsuficientFundsException se o utilizador nao tiver dinheiro
 	 *                                   suficiente na conta
 	 * @throws UserNotFoundException     se o utilizador userID nao existir
+	 * @throws FileNotFoundException 
 	 */
-	public void makePayment(int userID, double amount) throws UserNotFoundException, InsuficientFundsException {
+	public void makePayment(int userID, double amount) throws UserNotFoundException, InsuficientFundsException, FileNotFoundException {
 		User user = this.database.getUserByID(userID);
 		if (amount > this.loggedUser.getBalance()) {
 			throw new InsuficientFundsException(
@@ -58,12 +62,30 @@ public class Application {
 		transfer(this.loggedUser, user, amount);
 	}
 
-	private void transfer(User from, User to, double amount) {
+	private void transfer(User from, User to, double amount) throws FileNotFoundException {
 		double fromNewBalance = from.getBalance() - amount;
-		from.setBalance(fromNewBalance);
-
 		double toNewBalance = to.getBalance() + amount;
+
+		Scanner sc = new Scanner(new File(".\\src\\bds\\users.txt"));
+
+		while(sc.hasNextLine()) {
+			String line = sc.nextLine();
+			String[] splitLine = line.split(":");
+
+			int userId = Integer.parseInt(splitLine[0]);
+
+			if(userId == from.getID()) {
+				line.replaceAll(Double.toString(from.getBalance()), Double.toString(fromNewBalance));
+			}
+
+			if(userId == to.getID()) {
+				line.replaceAll(Double.toString(to.getBalance()), Double.toString(toNewBalance));
+			}
+		}
+		from.setBalance(fromNewBalance);
 		to.setBalance(toNewBalance);
+		
+		sc.close();
 	}
 
 	/**
@@ -73,14 +95,15 @@ public class Application {
 	 * @param amount o valor a pedir
 	 * 
 	 * @throws UserNotFoundException se o utilizador userID nao existir
+	 * @throws IOException 
 	 */
-	public void requestPayment(int userID, double amount) throws UserNotFoundException {
-		User user = this.database.getUserByID(userID);
+	public void requestPayment(int toID, double amount, int fromID) throws UserNotFoundException, IOException {
+		User user = this.database.getUserByID(toID);
 		if (user == null) {
 			throw new UserNotFoundException(
-					"Erro ao fazer um pedido de pagamento: Utilizador " + userID + " nao existente!");
+					"Erro ao fazer um pedido de pagamento: Utilizador " + toID + " nao existente!");
 		}
-		Request request = new Request(this.database.getUniqueRequestID(), amount, userID);
+		Request request = new Request(this.database.getUniqueRequestID(), amount, fromID, toID);
 		this.database.addRequest(request);
 		user.addRequest(request);
 	}
@@ -106,9 +129,10 @@ public class Application {
 	 *                                   suficiente
 	 * @throws UserNotRequesteeException o utilizador nao e a quem foi pedido o
 	 *                                   pedido com id requestID
+	 * @throws FileNotFoundException 
 	 */
 	public void payRequest(int requestID)
-			throws RequestNotFoundException, InsuficientFundsException, UserNotRequesteeException {
+			throws RequestNotFoundException, InsuficientFundsException, UserNotRequesteeException, FileNotFoundException {
 		Request request = this.database.getRequestByID(requestID);
 		if (request == null) {
 			throw new RequestNotFoundException(
@@ -118,15 +142,18 @@ public class Application {
 			throw new InsuficientFundsException(
 					"Erro ao autorizar o pagamento: Saldo Insuficiente na conta " + loggedUser.getID() + "!");
 		}
-		if (request.getUserID() != loggedUser.getID()) {
+		if (request.getFromID() != loggedUser.getID()) {
 			throw new UserNotRequesteeException(
 					"Erro ao autorizar o pagamento: identificador referente" + "a um pagamento pedido a outro cliente");
 		}
-		int id = request.getUserID();
-		User user = this.database.getUserByID(id);
-		double currentbalance = user.getBalance();
-		double newbalance = currentbalance - request.getAmount();
-		user.setBalance(newbalance);
+		User from = this.database.getUserByID(request.getFromID());
+		double fromNewBalance = from.getBalance() - request.getAmount();
+		from.setBalance(fromNewBalance);
+		
+		User to = this.database.getUserByID(request.getToID());
+		double toNewBalance = to.getBalance() + request.getAmount();
+		to.setBalance(toNewBalance);
+		
 		this.database.removeRequest(request);
 		this.loggedUser.removeRequest(request);
 	}
@@ -141,14 +168,14 @@ public class Application {
 	 * @throws WriterException
 	 */
 
-	public void obtainQRcode(double amount) throws WriterException, IOException {
-		QRCode qrCode = new QRCode(this.database.getUniqueQRCodeID(), amount, this.loggedUser.getID());
-		Request request = new Request(this.database.getUniqueRequestID(), amount, this.loggedUser.getID());
+	public void obtainQRcode(double amount, int toId) throws WriterException, IOException {
+		QRCode qrCode = new QRCode(this.database.getUniqueQRCodeID(), amount, this.getLoggedUser().getID());
+		Request request = new Request(this.database.getUniqueRequestID(), amount, this.getLoggedUser().getID(), toId);
 		request.setQRCode(qrCode);
 		this.loggedUser.addRequest(request);
 		int id = qrCode.getID();
 		String str = "" + id;
-		String path = "..\\qrcodes\\qrCode" + qrCode.getID() + ".png";
+		String path = ".\\src\\qrcodes\\" + qrCode.getID() + ".png";
 		String charset = "UTF-8";
 		QRCode.generateQRcode(str, Paths.get(path), charset, 200, 200);
 		System.out.println("QR Code created successfully.");
@@ -159,24 +186,25 @@ public class Application {
 	 * da lista mantida pelo servidor. Se o cliente nao tiver saldo suficiente na
 	 * conta, deve ser retornado um erro (mas o pedido continua a ser removido da
 	 * lista). Se o pedido identificado por QR code nao existir tambem deve retornar
-	 * um erro. " TODO
+	 * um erro. "
 	 * 
 	 * @throws UserNotRequesteeException
 	 * @throws RequestNotFoundException
+	 * @throws FileNotFoundException 
 	 */
 	public void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException,
-			RequestNotFoundException, UserNotRequesteeException {
+	RequestNotFoundException, UserNotRequesteeException, FileNotFoundException {
 		this.database.getQRCodeByID(qrCode.getID());
 		HashSet<Request> requests = loggedUser.getRequests();
 		for (Request request : requests) {
 			if (request.getQRCode().getID() == qrCode.getID()) {
-				int userID = request.getUserID();
+				int userID = request.getToID();
 				User user = database.getUserByID(userID);
 				if (user.getBalance() < qrCode.getAmount()) {
 					throw new InsuficientFundsException(
 							"O utilizador n�o tem saldo suficiente para esta transi��o");
 				}
-				payRequest(request.getID());
+				payRequest(request.getToID());
 			}
 		}
 		throw new QRCodeNotFoundException("QRCode n�o existente");
@@ -194,7 +222,7 @@ public class Application {
 			throw new GroupAleadyExistsException(
 					"Erro ao criar o grupo com id " + groupID + " : um grupo com esse id ja existe!");
 		}
-		Group group = new Group(groupID, this.loggedUser, new HashSet<User>());
+		Group group = new Group(groupID, this.loggedUser.getID(), new HashSet<Integer>());
 		this.database.addGroup(group);
 	}
 
@@ -227,11 +255,11 @@ public class Application {
 			throw new UserAlreadyInGroupException(
 					"Erro ao adicionar utilizador ao grupo: Utilizador " + userID + " ja no grupo!");
 		}
-		if (this.loggedUser.getID() != group.getOwner().getID()) {
+		if (this.loggedUser.getID() != group.getOwnerUser()) {
 			throw new UserNotOwnerException(
 					"Erro ao adicionar utilizador ao grupo: Utilizador logado nao e dono do grupo!");
 		}
-		group.addUser(user);
+		group.addUser(database.getUserByID(userID));
 	}
 
 	/**
@@ -278,19 +306,19 @@ public class Application {
 			throw new InexistentGroupException(
 					"Erro ao criar um pedido de pagamento de grupo: grupo " + groupID + " nao existente!");
 		}
-		if (group.getOwner().getID() != this.loggedUser.getID()) {
+		if (group.getOwnerUser() != this.loggedUser.getID()) {
 			throw new UserNotOwnerException(
 					"Erro ao criar um pedido de pagamento de grupo: o utilizador nao e dono do grupo " + groupID + "!");
 		}
 
-		HashSet<User> usersInGroup = group.getUserList();
+		HashSet<Integer> usersInGroup = group.getUserList();
 		DecimalFormat df = new DecimalFormat("0.00");
 		double amountPerMember = amount / usersInGroup.size();
 		double roundedAmount = Double.parseDouble(df.format(amountPerMember));
 
-		for (User user : usersInGroup) {
-			Request request = new Request(this.database.getUniqueRequestID(), roundedAmount, this.loggedUser.getID());
-			user.addRequest(request);
+		for (Integer userId : usersInGroup) {
+			Request request = new Request(this.database.getUniqueRequestID(), roundedAmount, this.loggedUser.getID(), userId);
+			database.getUserByID(userId).addRequest(request);
 			group.addRequest(request);
 		}
 	}
@@ -311,10 +339,10 @@ public class Application {
 			throw new GroupNotFoundException(
 					"Erro ao mostrar um pedido de pagamento de grupo: grupo " + groupID + " nao existente!");
 		}
-		if (group.getOwner().getID() != this.loggedUser.getID()) {
+		if (group.getOwnerUser() != this.loggedUser.getID()) {
 			throw new UserNotOwnerException(
 					"Erro ao mostrar um pedido de pagamento de grupo: o utilizador nao e dono do grupo " + groupID
-							+ "!");
+					+ "!");
 		}
 		for (Request request : group.getRequestList()) {
 			requests.append(request.toString() + "\n");
@@ -338,12 +366,12 @@ public class Application {
 			throw new GroupNotFoundException(
 					"Erro ao mostrar o historico dos pagamentos do grupo: grupo " + groupID + " nao existente!");
 		}
-		if (group.getOwner().getID() != this.loggedUser.getID()) {
+		if (group.getOwnerUser() != this.loggedUser.getID()) {
 			throw new UserNotOwnerException("Erro ao mostrar o historico dos pagamentos do grupo: o utilizador "
 					+ "nao e dono do grupo " + groupID + "!");
 		}
 
-		ArrayList<HashSet<Request>> history = group.getHistory();
+		ArrayList<HashSet<Request>> history = group.getRequestListHistory();
 		for (HashSet<Request> requests : history) {
 			for (Request request : requests) {
 				result.append(request.toString() + "\n");
@@ -354,6 +382,10 @@ public class Application {
 
 	public void setLoggedUser(User user) {
 		this.loggedUser = user;
+	}
+
+	public User getLoggedUser() {
+		return loggedUser;
 	}
 
 }

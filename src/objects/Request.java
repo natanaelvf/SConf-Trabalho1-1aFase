@@ -3,46 +3,56 @@ package objects;
 public class Request {
 	private int id;
 	private double amount;
-	private int userID;
+	private int fromID;
+	private int toID;
 	private QRCode qrCode;
 	
-	public Request(int id, double amount, int userID) {
+	public Request(int id, double amount, int fromID, int toID) {
 		this.id = id;
 		this.amount = amount;
-		this.userID = userID;
+		this.fromID = fromID;
+		this.toID = toID;
 		this.qrCode = null;
 	}
-	
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public double getAmount() {
+		return amount;
+	}
+
+	public void setAmount(double amount) {
+		this.amount = amount;
+	}
+
+	public int getFromID() {
+		return fromID;
+	}
+
+	public void setFromID(int fromID) {
+		this.fromID = fromID;
+	}
+
+	public int getToID() {
+		return toID;
+	}
+
+	public void setToID(int toID) {
+		this.toID = toID;
+	}
+
+	public QRCode getQRCode() {
+		return qrCode;
+	}
+
 	public void setQRCode(QRCode qrCode) {
 		this.qrCode = qrCode;
 	}
 	
-	public QRCode getQRCode() {
-		return this.qrCode;
-	}
-	
-	public double getAmount() {
-		return amount;
-	}
-	public void setAmount(double amount) {
-		this.amount = amount;
-	}
-	public int getUserID() {
-		return userID;
-	}
-	public void setUserID(int userID) {
-		this.userID = userID;
-	}
-	public int getID() {
-		return id;
-	}
-	public void setID(int id) {
-		this.id = id;
-	}
-	
-	@Override
-	public String toString() {
-		return "Amount: " + this.amount + " User that owes you: " + this.userID;
-	}
-
 }
