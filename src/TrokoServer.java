@@ -1,12 +1,22 @@
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Scanner;
+
+
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 
 import com.google.zxing.WriterException;
 
@@ -24,35 +34,88 @@ import objects.Database;
 import objects.Group;
 import objects.Request;
 import objects.User;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import javax.xml.bind.DatatypeConverter;
+
 
 public class TrokoServer {
 
 	public static Application app = new Application();
 	public static Database database = new Database();
+	private static String keyStore;
+	private static String keyStorePass;
+	
+	
+	private static Key serverPublicKey;
+	
+	private static final String users = "users.txt";
+
+	
+	private static Cipher ciRSA;
+	private static Certificate cert;
+	private static KeyStore ks;
+	private static final String SERVER_RSA = "serverRSA";
+	private static final String RSAPASS = "rsapassserver";
+	private static final String UNICODE_FORMAT = "UTF-8";
+
 
 	public static void main(String[] args) throws IOException, IllegalArgumentNumberException {
 
-		if (args.length > 1) {
-			throw new IllegalArgumentNumberException("Demasiados args passados ao servidor!");
-		}
-		int serverPort = 45678;
-		if (args[0] != null) {
-			serverPort = Integer.parseInt(args[0]);
-		}
-		app = new Application();
+		if (args.length != 3) {
 
-		database.getUsersFromDB();
+			System.out.println("Usage format: TrokoServer <port> <keystore> <keystore-password>");
+			System.exit(-1);
+		} 
 
-		database.getGroupsFromDB();
-
-		app.database = database;
-
-		System.out.println("Server listening on port: " + serverPort);
-
+		System.out.println("Starting server");
 		TrokoServer server = new TrokoServer();
-		server.startServer(serverPort);
-	}
 
+		int port = Integer.parseInt(args[0]);
+
+		init(args[1],args[2]);
+
+		server.startServer(port);
+	}
+	private static void init (String keystore, String keystorePassword) {
+		keyStore = keystore;
+		keyStorePass = keystorePassword;
+
+		try {
+
+			ks = KeyStore.getInstance("JCEKS");
+			FileInputStream fis = new FileInputStream(keyStore);
+			ks.load(fis, keyStorePass.toCharArray());
+			cert = ks.getCertificate(SERVER_RSA);
+			ciRSA = Cipher.getInstance("RSA");
+			//serverPrivateKey = ks.getKey(SERVER_RSA, RSAPASS.toCharArray());
+			serverPublicKey = cert.getPublicKey();
+
+		} catch (KeyStoreException e) {
+
+			System.out.println("Error getting KeyStore instance.");
+			System.exit(-1);
+		} catch (IOException | NoSuchAlgorithmException | CertificateException e) {
+
+			System.out.println("Error loading KeyStore. Wrong Password?");
+			System.exit(-1);
+		} catch (NoSuchPaddingException e) {
+
+			System.out.println("Error with Cipher.");
+			System.exit(-1);
+		}
+	}
 
 
 	public void startServer(int port) throws IOException {
@@ -75,7 +138,9 @@ public class TrokoServer {
 			}
 		}
 	}
+	
 
+	
 	private class ServerThread extends Thread {
 
 		private Socket socket = null;
@@ -85,26 +150,190 @@ public class TrokoServer {
 		ServerThread(Socket inSoc) {
 			socket = inSoc;
 		}
-
 		public void run() {
+
+			int userID = 0;
+			User user;
+			String userName = "";
+			Random random = new Random();
+			long nonce;
+			boolean flag;
+
+			Key pk;
+			try {
+
+				pk = ks.getKey(SERVER_RSA, RSAPASS.toCharArray());
+
+				} catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
+
+				System.out.println("Error getting Server Private Key");
+				System.exit(-1);
+			}
+
+			try {
+
+				outStream = new ObjectOutputStream(socket.getOutputStream());
+				inStream = new ObjectInputStream(socket.getInputStream());
+				try {
+
+					userName = (String)inStream.readObject();	
+					userID = Integer.parseInt(userName);//Receber 1
+					user= database.getUserByID(userID);
+
+				} catch (IOException | ClassNotFoundException e1) {
+
+					System.out.println("Error recieving Client ID.");
+
+					outStream.close();
+					inStream.close();
+					socket.close();
+					return;
+				}
+
+				byte[] signature;
+				long userNonce;
+				Certificate userCert;
+				nonce = random.nextLong();
+
+				if (!authenticateUser(userName)) {	//Registar utilizador
+
+					System.out.println("Creating new User.");
+
+					flag = false;
+					outStream.writeObject(nonce); 	//Enviar 1
+					outStream.writeObject(flag);	//Enviar 2
+					userName = (String)inStream.readObject();		//Receber 2
+
+					try {
+
+						userNonce = (long) inStream.readObject();    	//Receber 3
+						signature = (byte[]) inStream.readObject();		//Receber 4
+						userCert = (Certificate) inStream.readObject();	//Receber 5
+
+						PublicKey pubKey = userCert.getPublicKey();
+						Signature sig = Signature.getInstance("MD5withRSA");       	//assinatura
+						sig.initVerify(pubKey);           							//inicializa a assinatura
+						sig.update(bytefy(userNonce));   							//faz o update dos dados a ser assinados
+
+						if (nonce == userNonce && sig.verify(signature)) {       	//se a assinatura for valida
+
+							BufferedWriter writer = new BufferedWriter(new FileWriter(users, true));
+							String toEncrypt = (userID + ":" + userName + ":" + user.getRequests());
+							byte[] encrypted = (encryptString(toEncrypt, serverPublicKey));
+							String encryptedString = DatatypeConverter.printBase64Binary(encrypted);
+							writer.write(encryptedString);
+							writer.newLine();
+							writer.close();
+
+							System.out.println("User successfully Created.");
+							outStream.writeObject(true);	//Enviar 3
+						} else {
+
+							System.out.println("Error creating User.");
+							outStream.writeObject(false);	//Enviar 3
+							return;
+						}
+					} catch (IOException | InvalidKeyException | SignatureException | NoSuchAlgorithmException e) {
+
+						System.out.println("Error recieving Authentication Information.");
+						System.exit(-1);
+					}
+
+					authenticatedRun(userID);
+
+				} else { 														//Utilizador Registado
+
+					System.out.println("Authenticating User.");
+
+					flag = true;
+					outStream.writeObject(nonce); 								//Enviar 1
+					outStream.writeObject(flag);								//Enviar 2
+
+					signature = (byte[]) inStream.readObject(); 				//Receber 2
+					userCert = getUserCertificate(userName);
+					PublicKey pubKey = userCert.getPublicKey();
+					Signature sig = Signature.getInstance("MD5withRSA");       	//Assinatura
+					sig.initVerify(pubKey);           							//Inicializar Assinatura
+					sig.update(bytefy(nonce));   								//Update Dados Para Assinar
+
+					if (sig.verify(signature)) {       							//Assinatura Valida
+
+						System.out.println("User Authenticated.");
+						outStream.writeObject(true);							//Enviar 3
+						authenticatedRun(userID);
+					} else {
+
+						outStream.writeObject(false);							//Enviar 3
+						System.out.println("Error authenticating User.");
+					}
+				}
+
+				outStream.close();		//Fechar objeto out
+				inStream.close();		//Fechar objeto in
+				socket.close();			//Fechar socket cliente
+
+			} catch (IOException | ClassNotFoundException | SignatureException | NoSuchAlgorithmException | InvalidKeyException e) {
+
+				System.out.println("Error registering/authenticating User.");
+				return;
+			}
+		}
+		
+		private byte[] bytefy(long nonce) {
+
+			byte[] bytes = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
+			return bytes;
+		}
+		
+		private Certificate getUserCertificate(String name) {
+
+			String getCert = "PubKeys\\" + name + "RSApub.cer";
+
+			CertificateFactory fact;
+			try {
+
+				fact = CertificateFactory.getInstance("X509");
+
+				FileInputStream fis;
+				try {
+
+					fis = new FileInputStream(getCert);
+
+					try {
+
+						Certificate cer = fact.generateCertificate(fis);
+						if (cer == null) {
+
+							System.out.println("Error getting Certificate");
+						}
+						return cer;
+					} catch (CertificateException e) {
+
+						System.out.println("Error generating Certificate.");
+					}
+				} catch (FileNotFoundException e) {
+
+					System.out.println("Error finding Certificate.");
+				}
+			} catch (CertificateException e1) {
+
+				System.out.println("Error getting Certificate.");
+			}
+			System.out.println("Error getting Certificate. Returning null");
+			return null;
+		}
+
+
+
+
+		public void authenticatedRun(int ID) {
+			int userId = ID;
 			try {
 				outStream = new ObjectOutputStream(socket.getOutputStream());
 				inStream = new ObjectInputStream(socket.getInputStream());
-
-				int userId = 0;
-				String passwd = null;
-				String user = (String) inStream.readObject();
-				userId = Integer.parseInt(user); // 100000000
-				passwd = (String) inStream.readObject();
-
-				System.out.println(user + " " + passwd);
-				if (authenticateUser(user, passwd)) {
-					outStream.writeObject("LOGGED");
-				}
-
 				User loggedUser = app.database.getUserByID(userId);
-
 				app.setLoggedUser(loggedUser);
+				
 
 				String input = (String) inStream.readObject();
 
@@ -125,7 +354,7 @@ public class TrokoServer {
 							int userToPay = Integer.parseInt(data[1]);
 							amount = Double.parseDouble(data[2]);
 							app.makePayment(userToPay, amount);
-							String p = "Paid " + amount + " to user" + user + "\n";
+							String p = "Paid " + amount + " to user" + loggedUser.getID() + "\n";
 							outStream.writeObject(p);
 							break;
 						case "r":
@@ -292,12 +521,12 @@ public class TrokoServer {
 			}
 		}
 
-		private boolean authenticateUser(String user, String passwd) {
+		private boolean authenticateUser(String user) {
 			try {
 				Scanner myReader = new Scanner(new File(".\\src\\bds\\auth.txt"));
 				while (myReader.hasNextLine()) {
 					String[] data = myReader.nextLine().split(":");
-					if (data[0] == user && data[1] == passwd) {
+					if (data[0] == user) {
 						return true;
 					}
 				}
@@ -308,6 +537,42 @@ public class TrokoServer {
 			}
 			return false;
 		}
+		
+		public byte[] encryptString(String dataToEncrypt, Key myKey) {
+
+			try {
+
+				byte[] text = dataToEncrypt.getBytes(UNICODE_FORMAT);
+				ciRSA.init(Cipher.ENCRYPT_MODE, myKey);
+				byte[] textEncrypted = ciRSA.doFinal(text);
+
+				return textEncrypted;
+
+			} catch (Exception e) {
+
+				e.printStackTrace();
+				return null;
+			}
+		}
+
+		public String decryptString(byte[] dataToDecrypt, Key myKey) {
+
+			try {
+
+				ciRSA.init(Cipher.DECRYPT_MODE, myKey);
+				byte[] textDecrypted = ciRSA.doFinal(dataToDecrypt);
+				String result = new String(textDecrypted);
+
+				return result;
+
+			} catch (Exception e) {
+
+				e.printStackTrace();
+				return null;
+			}
+		}
+		
 	}
+
 }
 
