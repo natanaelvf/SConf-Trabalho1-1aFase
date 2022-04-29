@@ -8,5 +8,8 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Program Files (x86)/Java/core-3.3.0.jar"/>
 	<classpathentry kind="lib" path="C:/Program Files (x86)/Java/javase-3.3.0.jar"/>
+	<classpathentry kind="lib" path="/Users/natanaelferreira/Desktop/uni/core-3.3.0.jar"/>
+	<classpathentry kind="lib" path="/Users/natanaelferreira/Desktop/uni/javase-3.3.0.jar"/>
+	<classpathentry kind="lib" path="/Users/natanaelferreira/Desktop/uni/zxing.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

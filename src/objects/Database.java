@@ -192,25 +192,80 @@ public class Database {
 	}
 
 	public void getGroupsFromDB() throws FileNotFoundException {
-		Scanner sc = new Scanner(new File(".\\src\\bds\\auth.txt"));
-
-		while(sc.hasNextLine()) {
-			String line = sc.nextLine();
-			String[] splitLine = line.split(":");
-			
-			int groupId = Integer.parseInt(splitLine[0]);
-			User loggedUser = this.getUserByID(Integer.parseInt(splitLine[1]));
-			
-			String[] userIds = splitLine[2].split("-");
-			HashSet<Integer> users = new HashSet<>();
-			
-			for(String userId : userIds) {
-				users.add(Integer.parseInt(userId));
+		try (Scanner sc = new Scanner(new File(".\\src\\bds\\auth.txt"));) {
+			while(sc.hasNextLine()) {
+				String line = sc.nextLine();
+				String[] splitLine = line.split(":");
+				
+				int groupId = Integer.parseInt(splitLine[0]);
+				User loggedUser = this.getUserByID(Integer.parseInt(splitLine[1]));
+				
+				String[] userIds = splitLine[2].split("-");
+				HashSet<Integer> users = new HashSet<>();
+				
+				for(String userId : userIds) {
+					users.add(Integer.parseInt(userId));
+				}
+				
+				Group group = new Group(groupId, loggedUser.getID(), users);
+				this.addGroup(group);
 			}
-			
-			Group group = new Group(groupId, loggedUser.getID(), users);
-			this.addGroup(group);
 		}
 	}
 
+	public void getGroupRequests() throws FileNotFoundException {
+		try(Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequests.txt"));) {
+			while(sc.hasNextLine()) {
+				
+				String line = sc.nextLine();
+				String[] splitLine = line.split(":");
+				
+				Group group = this.getGroupByID(Integer.parseInt(splitLine[0]));
+				
+				String[] requestsString = splitLine[1].split(";");
+				
+				for(String requestString : requestsString) {
+					
+					String[] requestSplit = requestString.split("-");
+					
+					int requestID = Integer.parseInt(requestSplit[0]);
+					int amount = Integer.parseInt(requestSplit[1]);
+					int fromID = Integer.parseInt(requestSplit[2]);
+					
+					for(Integer toID: group.getUserList()) {
+						group.addRequest(new Request(requestID, amount, fromID, toID));
+					}
+				}
+				this.addGroup(group);
+			}
+		}
+	}
+	
+	public void getGroupRequestHistory() throws FileNotFoundException {
+		try(Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequestHistory.txt"));) {
+			while(sc.hasNextLine()) {
+				
+				String line = sc.nextLine();
+				String[] splitLine = line.split(":");
+				
+				Group group = this.getGroupByID(Integer.parseInt(splitLine[0]));
+				
+				String[] requestsString = splitLine[1].split(";");
+				
+				for(String requestString : requestsString) {
+					
+					String[] requestSplit = requestString.split("-");
+					
+					int requestID = Integer.parseInt(requestSplit[0]);
+					int amount = Integer.parseInt(requestSplit[1]);
+					int fromID = Integer.parseInt(requestSplit[2]);
+					
+					for(Integer toID: group.getUserList()) {
+						group.addRequest(new Request(requestID, amount, fromID, toID));
+					}
+				}
+				this.addGroup(group);
+			}
+		}
+	}
 }

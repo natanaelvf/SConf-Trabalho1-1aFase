@@ -5,24 +5,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
-import java.util.Scanner;
-
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-
-import exceptions.IllegalArgumentNumberException;
-import exceptions.InvalidPasswordException;
-import exceptions.InvalidUserIdException;
-import objects.Request;
-import objects.User;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -32,6 +18,15 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.util.Scanner;
+
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+
+import objects.Database;
+import objects.User;
 
 public class Trokos {
 
@@ -39,7 +34,7 @@ public class Trokos {
 	static ObjectOutputStream outStream;
 	static ObjectInputStream  inStream;
 	static Socket clientSocket;
-	
+
 	private static String keyStore;
 	private static String keyStorePass;
 	private static Cipher ciRSA;
@@ -49,11 +44,12 @@ public class Trokos {
 	private static String userID;
 
 	private static PrivateKey userPK;
+	private static Database database;
 	private static final String UNICODE_FORMAT = "UTF-8";
 
-	public static void main(String[] args) throws IllegalArgumentNumberException, NumberFormatException,
-			InvalidUserIdException, InvalidPasswordException, IOException, ClassNotFoundException {
-		
+	public static void main(String[] args) throws NumberFormatException,
+	IOException, ClassNotFoundException {
+
 		if (args.length != 5) {    //Se nao tiver os argumentos obrigatorios
 
 			System.out.println("Usage format: Trokos <serverAddress> <truststore> <keystore> <keystore-password> <clientID>");
@@ -72,11 +68,11 @@ public class Trokos {
 
 			inStream = new ObjectInputStream(clientSocket.getInputStream());	//Input
 			outStream = new ObjectOutputStream(clientSocket.getOutputStream());	//Output
-									//Scanner
+			//Scanner
 
 			init(args[2], args[3], args[4]);
 
-			outStream.writeObject(new String(userID));     			//Enviar 1
+			outStream.writeObject(userID);     			//Enviar 1
 			System.out.println("Id sent.");
 
 			long nonce = (long) inStream.readObject();    			//Receber 1
@@ -122,6 +118,14 @@ public class Trokos {
 			String answer = (String)inStream.readObject(); //
 			System.out.println(answer);
 
+			User loggedUser = app.database.getUserByID(Integer.parseInt(userID));
+
+			app.setLoggedUser(loggedUser);
+
+
+			Trokos client = new Trokos();
+			client.startClient(serverAddress[1]);
+
 		} catch (IOException e) {
 
 			System.out.println("Error: Connection closed.");
@@ -130,11 +134,10 @@ public class Trokos {
 		sc.close();
 		clientSocket.close();
 	}
-	private static byte[] signNonce(String id, long nonce, String ks, String ksPass) {
+	private static byte[] signNonce(String id, long nonce, String ks, String ksPass) throws IOException {
 		Scanner sc= new Scanner(System.in);
-		try {
-
-			FileInputStream kfile = new FileInputStream(ks);
+		try (FileInputStream kfile = new FileInputStream(ks))
+		{
 			KeyStore kstore = KeyStore.getInstance("JCEKS");
 			kstore.load(kfile, ksPass.toCharArray());
 
@@ -150,16 +153,17 @@ public class Trokos {
 		} catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException | UnrecoverableKeyException | InvalidKeyException | SignatureException e) {
 
 			e.printStackTrace();
+		} finally {
+			sc.close();
 		}
 		sc.close();
-		return null;
+		return new byte[0];
 	}
 	private static byte[] bytefy(long nonce) {
-		byte[] bytes = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
-		return bytes;
+		return ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
 	}
-	
-	
+
+
 	private static void init(String keystore, String keystorePassword, String id) {
 
 		try {
@@ -202,17 +206,15 @@ public class Trokos {
 			System.exit(-1);
 		}
 	}
-	
+
 
 	private void startClient(String serverAdress) throws IOException, ClassNotFoundException {
-
 		Scanner sc = new Scanner(System.in);
 		printHelp();
 		String userInput = sc.nextLine();
 
-
-		while (userInput != "quit") {
-			if (userInput != "help") {
+		while (userInput.equals("quit")) {
+			if (userInput.equals("help")) {
 				outStream.writeObject(userInput);
 				String fromServer = (String) inStream.readObject();
 				System.out.println(fromServer);
@@ -226,31 +228,31 @@ public class Trokos {
 	}
 
 	private void printHelp() {
-		System.out.println("(b)alance – obtem valor atual do saldo da sua conta");
-		System.out.println("(m)akepayment <userID> <amount> – transfere o valor amount da sua conta de clientID para a"
+		System.out.println("(b)alance - obtem valor atual do saldo da sua conta");
+		System.out.println("(m)akepayment <userID> <amount> - transfere o valor amount da sua conta de clientID para a"
 				+ "conta de userID");
-		System.out.println("(r)equestpayment <userID> <amount> – envia um pedido de pagamento ao utilizador"
+		System.out.println("(r)equestpayment <userID> <amount> - envia um pedido de pagamento ao utilizador"
 				+ "userID, de valor amount");
-		System.out.println("(v)iewrequests – obtem do servidor a sua lista de pedidos de pagamentos pendentes");
-		System.out.println("(p)ayrequest <reqID> – autoriza o pagamento do pedido com identificador reqID, "
+		System.out.println("(v)iewrequests - obtem do servidor a sua lista de pedidos de pagamentos pendentes");
+		System.out.println("(p)ayrequest <reqID> - autoriza o pagamento do pedido com identificador reqID, "
 				+ " removendo o pedido da lista de pagamentos pendentes");
-		System.out.println("(o)btainQRcode <amount> – cria um pedido de pagamento no servidor e coloca-o numa"
+		System.out.println("(o)btainQRcode <amount> - cria um pedido de pagamento no servidor e coloca-o numa"
 				+ " lista de pagamentos identificados por QR code");
-		System.out.println("(c)onfirmQRcode <QRcode> – confirma e autoriza o pagamento identificado por QR code, "
+		System.out.println("(c)onfirmQRcode <QRcode> - confirma e autoriza o pagamento identificado por QR code, "
 				+ "removendo o pedido da lista mantida pelo servidor");
-		System.out.println("(n)ewgroup <groupID> – cria um grupo para pagamentos partilhados, cujo dono (owner)"
-				+ "será o cliente que o criou");
-		System.out.println("(a)ddu <userID> <groupID> – adiciona o utilizador userID como membro do grupo indicado.");
-		System.out.println("(g)roups – mostra uma lista dos grupos de que o cliente é dono, e uma lista dos grupos a "
+		System.out.println("(n)ewgroup <groupID> - cria um grupo para pagamentos partilhados, cujo dono (owner)"
+				+ "sera o cliente que o criou");
+		System.out.println("(a)ddu <userID> <groupID> - adiciona o utilizador userID como membro do grupo indicado.");
+		System.out.println("(g)roups - mostra uma lista dos grupos de que o cliente eh dono, e uma lista dos grupos a "
 				+ "que pertence");
-		System.out.println("(d)ividepayment <groupID> <amount> – cria um pedido de pagamento de grupo, cujo valor "
-				+ "total amount deve ser dividido pelos membros do grupo groupID");
-		System.out.println("(s)tatuspayments <groupID> – mostra o estado de cada pedido de pagamento de grupo, ou\r\n"
-				+ "seja, que membros de grupo ainda não pagaram esse pedido");
-		System.out.println("(h)istory <groupID> – mostra o histórico dos pagamentos do grupo groupID já concluídos");
+		System.out.println("(d)ividepayment <groupID> <amount> - cria um pedido de pagamento de grupo, cujo valor "
+				+ " amount deve ser dividido pelos membros do grupo groupID");
+		System.out.println("(s)tatuspayments <groupID> - mostra o estado de cada pedido de pagamento de grupo, ou"
+				+ "seja, que membros de grupo ainda nao pagaram esse pedido");
+		System.out.println("(h)istory <groupID> - mostra o historico dos pagamentos do grupo groupID ja concluidos");
 		System.out.println("Insira um comando!");
 	}
-	
+
 
 
 	private static Certificate getUserCertificate(String name) {
@@ -264,15 +266,10 @@ public class Trokos {
 
 			FileInputStream fis;
 			try {
-
 				fis = new FileInputStream(getCert);
-
 				try {
-
-					Certificate cer = fact.generateCertificate(fis);
-					return cer;
+					return fact.generateCertificate(fis);
 				} catch (CertificateException e) {
-
 					System.out.println("Error generating Certificate.");
 				}
 			} catch (FileNotFoundException e) {
@@ -286,46 +283,37 @@ public class Trokos {
 		System.out.println("Error getting Certificate. Returning null");
 		return null;
 	}
-	
-	public static Key unwrapKey(byte[] symKey) throws InvalidKeyException, IllegalBlockSizeException {
 
+	public static Key unwrapKey(byte[] symKey) throws InvalidKeyException {
 		try {
-
 			Cipher cipher = Cipher.getInstance("RSA");
 			cipher.init(Cipher.UNWRAP_MODE, userPK);
-			final Key unwrapped = cipher.unwrap(symKey, "RSA", Cipher.SECRET_KEY);
-			return unwrapped;
+			return cipher.unwrap(symKey, "RSA", Cipher.SECRET_KEY);
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
 
 			System.out.println("Error decrypting Group Key. Returning null.");
 			return null;
 		}
 	}
-	
+
 	public static byte[] wrapKey(PublicKey pubKey, SecretKey symKey) throws InvalidKeyException, IllegalBlockSizeException {
-
 		try {
-
 			Cipher cipher = Cipher.getInstance("RSA");
 			cipher.init(Cipher.WRAP_MODE, pubKey);
-			final byte[] wrapped = cipher.wrap(symKey);
-			return wrapped;
+			return cipher.wrap(symKey);
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-
 			System.out.println("Error encrypting Group Key. Returning null.");
-			return null;
+			return new byte[0];
 		}
 	}
-	
+
 	public static String decryptMsg(byte[] dataToDecrypt, Key myKey) {
 
 		try {
 
 			ciAES.init(Cipher.DECRYPT_MODE, myKey);
 			byte[] textDecrypted = ciAES.doFinal(dataToDecrypt);
-			String result = new String(textDecrypted);
-
-			return result;
+			return new String(textDecrypted);
 
 		} catch (Exception e) {
 
@@ -333,21 +321,16 @@ public class Trokos {
 			return null;
 		}
 	}
-	
+
 	public static byte[] encryptMsg(String dataToEncrypt, Key myKey) {
 
 		try {
-
 			byte[] text = dataToEncrypt.getBytes(UNICODE_FORMAT);
 			ciAES.init(Cipher.ENCRYPT_MODE, myKey);
-			byte[] textEncrypted = ciAES.doFinal(text);
-
-			return textEncrypted;
-
+			return ciAES.doFinal(text);
 		} catch (Exception e) {
-
 			e.printStackTrace();
-			return null;
+			return new byte[0];
 		}
 	}
 }

@@ -71,7 +71,7 @@ public class TrokoServer {
 	private static final String UNICODE_FORMAT = "UTF-8";
 
 
-	public static void main(String[] args) throws IOException, IllegalArgumentNumberException {
+	public static void main(String[] args) throws IOException {
 
 		if (args.length != 3) {
 
@@ -127,6 +127,10 @@ public class TrokoServer {
 			System.err.println(e.getMessage());
 			System.exit(-1);
 		}
+		
+		app.database.getGroupsFromDB();
+		app.database.getUsersFromDB();
+		app.database.getGroupRequests();
 
 		while (true) {
 			try {
@@ -220,7 +224,7 @@ public class TrokoServer {
 							BufferedWriter writer = new BufferedWriter(new FileWriter(users, true));
 							String toEncrypt = (userID + ":" + userName + ":" + user.getRequests());
 							byte[] encrypted = (encryptString(toEncrypt, serverPublicKey));
-							String encryptedString = DatatypeConverter.printBase64Binary(encrypted);
+							String encryptedString = DataTypeConverter.printBase64Binary(encrypted);
 							writer.write(encryptedString);
 							writer.newLine();
 							writer.close();
@@ -273,9 +277,7 @@ public class TrokoServer {
 				socket.close();			//Fechar socket cliente
 
 			} catch (IOException | ClassNotFoundException | SignatureException | NoSuchAlgorithmException | InvalidKeyException e) {
-
 				System.out.println("Error registering/authenticating User.");
-				return;
 			}
 		}
 		
@@ -338,32 +340,29 @@ public class TrokoServer {
 				String input = (String) inStream.readObject();
 
 				try {
-					while (input != "quit" || input != "q") {
+					while (input.equals("quit") || input.equals("q")) {
 						System.out.println(input);
 						String[] data = input.split(" ");
 						double amount;
 						switch (data[0]) {
-						case "b":
-						case "balance":
+						case "b", "balance":
 							String b = "Your balance is: " + app.viewBalance();
 							outStream.writeObject(b);
 							System.out.println(b);
 							break;
-						case "m":
-						case "makepayment":
+						case "m", "makepayment":
 							int userToPay = Integer.parseInt(data[1]);
 							amount = Double.parseDouble(data[2]);
 							app.makePayment(userToPay, amount);
 							String p = "Paid " + amount + " to user" + loggedUser.getID() + "\n";
 							outStream.writeObject(p);
 							break;
-						case "r":
-						case "requestpayment" :
+						case "r", "requestpayment" :
 							int requestee = Integer.parseInt(data[1]);
 							amount = Double.parseDouble(data[2]);
 							app.requestPayment(requestee, amount, app.getLoggedUser().getID());
-						case "v":
-						case "view":
+							break;
+						case "v", "view":
 							System.out.println("Your requests are: ");
 							outStream.writeObject("Your requests are: ");
 							for (Request request : app.viewRequests()) {
@@ -371,36 +370,31 @@ public class TrokoServer {
 								System.out.println(request.toString() + "\n");
 							}
 							break;
-						case "o":
-						case "obtain":
+						case "o", "obtain":
 							double code = Double.parseDouble(data[1]);
 							String o = "Your code has ID: " + code;
 							System.out.println(o);
 							outStream.writeObject(o);
 							app.obtainQRcode(code, loggedUser.getID());
 							break;
-						case "c":
-						case "confirm":
+						case "c", "confirm":
 							System.out.println(app.database.getQRCodeByID(Integer.parseInt(data[1])));
 							app.confirmQRcode(app.database.getQRCodeByID(Integer.parseInt(data[1])));
 							break;
-						case "n":
-						case "newgroup":
+						case "n", "newgroup":
 							int groupID = Integer.parseInt(data[1]);
 							app.newGroup(groupID);
 							System.out.println("New group created with ID: " + groupID);
 							outStream.writeObject("New group created with ID: " + groupID);
 							break;
-						case "a":
-						case "addu":
+						case "a", "addu":
 							int groupToAddUser = Integer.parseInt(data[1]);
 							int userToAdd = Integer.parseInt(data[2]);
 							app.addUserToGroup(groupToAddUser, userToAdd);
 							System.out.println("Added user: " + userToAdd + " to group" + groupToAddUser);
 							outStream.writeObject("Added user: " + userToAdd + " to group" + groupToAddUser);
 							break;
-						case "g":
-						case "groups":
+						case "g", "groups":
 							HashSet<Group>[] groups = app.viewGroups();
 							outStream.writeObject("User owns the following groups: ");
 							for (Group group : groups[0]) {
@@ -413,8 +407,7 @@ public class TrokoServer {
 								outStream.writeObject(group.toString());
 							}
 							break;
-						case "s":
-						case "status":
+						case "s", "status":
 							int groupToCheck = Integer.parseInt(data[1]);
 							System.out.println(
 									"The following requests for the group" + groupToCheck + " are still to be paid: ");
@@ -423,13 +416,11 @@ public class TrokoServer {
 							System.out.println(app.statusPayments(groupToCheck));
 							outStream.writeObject(app.statusPayments(groupToCheck));
 							break;
-						case "h":
-						case "history":
+						case "h", "history":
 							System.out.println(app.viewHistory(Integer.parseInt(data[1])));
 							outStream.writeObject(app.viewHistory(Integer.parseInt(data[1])));
 							break;
-						case "pay":
-						case "payrequest":
+						case "pay", "payrequest":
 							int requestId = Integer.parseInt(data[1]);
 							System.out.println("The request with ID: " + requestId + " will be paid");
 							outStream.writeObject("The request with ID: " + requestId + " will be paid");
