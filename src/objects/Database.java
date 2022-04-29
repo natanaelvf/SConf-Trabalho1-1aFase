@@ -4,9 +4,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.security.Key;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
+
+import javax.crypto.Cipher;
+
 import java.util.Scanner;
 
 public class Database {
@@ -14,6 +18,8 @@ public class Database {
 
 	private final int MAX_ID = 999999999;
 	private final int MIN_ID = 100000000;
+	private static Cipher ciRSA;
+	private static final String UNICODE_FORMAT = "UTF-8";
 
 	private HashMap<Integer,User> userBase = new HashMap<Integer,User>();
 	private HashMap<Integer,Request> requestBase = new HashMap<Integer,Request>();
@@ -266,6 +272,39 @@ public class Database {
 				}
 				this.addGroup(group);
 			}
+		}
+	}
+	public String decryptString(byte[] dataToDecrypt, Key myKey) {
+
+		try {
+
+			ciRSA.init(Cipher.DECRYPT_MODE, myKey);
+			byte[] textDecrypted = ciRSA.doFinal(dataToDecrypt);
+			String result = new String(textDecrypted);
+
+			return result;
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	public byte[] encryptString(String dataToEncrypt, Key myKey) {
+
+		try {
+
+			byte[] text = dataToEncrypt.getBytes(UNICODE_FORMAT);
+			ciRSA.init(Cipher.ENCRYPT_MODE, myKey);
+			byte[] textEncrypted = ciRSA.doFinal(text);
+
+			return textEncrypted;
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+			return null;
 		}
 	}
 }

@@ -60,7 +60,6 @@ public class TrokoServer {
 	
 	private static Key serverPublicKey;
 	
-	private static final String users = "users.txt";
 
 	
 	private static Cipher ciRSA;
@@ -68,7 +67,7 @@ public class TrokoServer {
 	private static KeyStore ks;
 	private static final String SERVER_RSA = "serverRSA";
 	private static final String RSAPASS = "rsapassserver";
-	private static final String UNICODE_FORMAT = "UTF-8";
+
 
 
 	public static void main(String[] args) throws IOException {
@@ -199,7 +198,7 @@ public class TrokoServer {
 				Certificate userCert;
 				nonce = random.nextLong();
 
-				if (!authenticateUser(userName)) {	//Registar utilizador
+				if (!userExists(userID)) {	//Registar utilizador
 
 					System.out.println("Creating new User.");
 
@@ -220,15 +219,7 @@ public class TrokoServer {
 						sig.update(bytefy(userNonce));   							//faz o update dos dados a ser assinados
 
 						if (nonce == userNonce && sig.verify(signature)) {       	//se a assinatura for valida
-
-							BufferedWriter writer = new BufferedWriter(new FileWriter(users, true));
-							String toEncrypt = (userID + ":" + userName + ":" + user.getRequests());
-							byte[] encrypted = (encryptString(toEncrypt, serverPublicKey));
-							String encryptedString = DataTypeConverter.printBase64Binary(encrypted);
-							writer.write(encryptedString);
-							writer.newLine();
-							writer.close();
-
+							database.addUser(user);
 							System.out.println("User successfully Created.");
 							outStream.writeObject(true);	//Enviar 3
 						} else {
@@ -281,11 +272,13 @@ public class TrokoServer {
 			}
 		}
 		
+		
 		private byte[] bytefy(long nonce) {
 
 			byte[] bytes = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
 			return bytes;
 		}
+		
 		
 		private Certificate getUserCertificate(String name) {
 
@@ -511,57 +504,16 @@ public class TrokoServer {
 				}
 			}
 		}
-
-		private boolean authenticateUser(String user) {
-			try {
-				Scanner myReader = new Scanner(new File(".\\src\\bds\\auth.txt"));
-				while (myReader.hasNextLine()) {
-					String[] data = myReader.nextLine().split(":");
-					if (data[0] == user) {
-						return true;
-					}
-				}
-				myReader.close();
-			} catch (FileNotFoundException e) {
-				System.out.println("An error occurred.");
-				e.printStackTrace();
+		
+		private boolean userExists(int userID) {
+			
+			User u=database.getUserByID(userID);
+			if (u.getID() == userID) {
+					return true;
 			}
 			return false;
 		}
-		
-		public byte[] encryptString(String dataToEncrypt, Key myKey) {
 
-			try {
-
-				byte[] text = dataToEncrypt.getBytes(UNICODE_FORMAT);
-				ciRSA.init(Cipher.ENCRYPT_MODE, myKey);
-				byte[] textEncrypted = ciRSA.doFinal(text);
-
-				return textEncrypted;
-
-			} catch (Exception e) {
-
-				e.printStackTrace();
-				return null;
-			}
-		}
-
-		public String decryptString(byte[] dataToDecrypt, Key myKey) {
-
-			try {
-
-				ciRSA.init(Cipher.DECRYPT_MODE, myKey);
-				byte[] textDecrypted = ciRSA.doFinal(dataToDecrypt);
-				String result = new String(textDecrypted);
-
-				return result;
-
-			} catch (Exception e) {
-
-				e.printStackTrace();
-				return null;
-			}
-		}
 		
 	}
 
