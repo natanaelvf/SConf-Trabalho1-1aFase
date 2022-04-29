@@ -7,18 +7,22 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.Set;
 
 public class Database {
 
 
-	private final int MAX_ID = 999999999;
-	private final int MIN_ID = 100000000;
+	private static final int MAX_ID = 999999999;
+	private static final int MIN_ID = 100000000;
 
-	private HashMap<Integer,User> userBase = new HashMap<Integer,User>();
-	private HashMap<Integer,Request> requestBase = new HashMap<Integer,Request>();
-	private HashMap<Integer,Group> groupBase = new HashMap<Integer,Group>();
-	private HashMap<Integer,QRCode> qrCodeBase = new HashMap<Integer,QRCode>();
+	private HashMap<Integer,User> userBase = new HashMap<>();
+	private HashMap<Integer,Request> requestBase = new HashMap<>();
+	private HashMap<Integer,Group> groupBase = new HashMap<>();
+	private HashMap<Integer,QRCode> qrCodeBase = new HashMap<>();
+
+	Random r = new Random();
 
 	public Request getRequestByID(int requestID) {
 		return requestBase.get(requestID);
@@ -38,17 +42,17 @@ public class Database {
 	}
 
 	public int getUniqueRequestID() {
-		int id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
+		int id = r.nextInt(MAX_ID-MIN_ID)+MIN_ID;
 		while(requestBase.keySet().contains(id)) {
-			id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
+			id = r.nextInt(MAX_ID-MIN_ID)+MIN_ID;
 		}
 		return id;
 	}
 
 	public int getUniqueQRCodeID() {
-		int id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
+		int id = r.nextInt(MAX_ID-MIN_ID)+MIN_ID;
 		while(qrCodeBase.keySet().contains(id)) {
-			id = (int)Math.floor(Math.random()*(MAX_ID-MIN_ID+1)+MIN_ID);
+			id = r.nextInt(MAX_ID-MIN_ID)+MIN_ID;
 		}
 		return id;
 	}
@@ -63,10 +67,10 @@ public class Database {
 
 	public void addRequest(Request request) throws IOException {
 		Scanner sc = new Scanner(new File(".\\src\\bds\\users.txt"));
-		
+
 		StringBuilder sb = new StringBuilder();
-		
-	    PrintWriter printout = new PrintWriter(".\\src\\bds\\users.txt");
+
+		PrintWriter printout = new PrintWriter(".\\src\\bds\\users.txt");
 
 		while(sc.hasNextLine()) {
 			String line = sc.nextLine();
@@ -79,19 +83,19 @@ public class Database {
 				sb.append(line + "\r\n");
 			}
 		}
-		
+
 		this.requestBase.put(request.getFromID(), request);
 		printout.write(sb.toString());
-		
+
 		printout.close();
 	}
 
 	public void removeRequest(Request request) throws FileNotFoundException {
 		Scanner sc = new Scanner(new File(".\\src\\bds\\users.txt"));
-		
+
 		StringBuilder sb = new StringBuilder();
-		
-	    PrintWriter printout = new PrintWriter(".\\src\\bds\\users.txt");
+
+		PrintWriter printout = new PrintWriter(".\\src\\bds\\users.txt");
 
 		while(sc.hasNextLine()) {
 			String line = sc.nextLine();
@@ -103,12 +107,12 @@ public class Database {
 			} 
 			sb.append(line);
 		}
-		
+
 		this.requestBase.put(request.getFromID(), request);
 		printout.write(sb.toString());
-		
+
 		printout.close();
-		
+
 		this.requestBase.remove(request.getFromID(), request);
 	}
 
@@ -121,7 +125,7 @@ public class Database {
 	}
 
 
-	public HashSet<Group> getGroupsByOwner(User user) {
+	public Set<Group> getGroupsByOwner(User user) {
 		HashSet<Group> result = new HashSet<>();
 		for (Entry<Integer,Group> group : this.groupBase.entrySet()) {
 			if (isOwner(group, user)) {
@@ -131,8 +135,8 @@ public class Database {
 		return result;
 	}
 
-	public HashSet<Group> getGroupsByClient(User user) {
-		HashSet<Group> result = getGroupsByOwner(user);
+	public Set<Group> getGroupsByClient(User user) {
+		Set<Group> result = getGroupsByOwner(user);
 		for (Entry<Integer,Group> group : this.groupBase.entrySet()) {
 			for (Integer user2 : group.getValue().getUserList()) {
 				if (user2 == user.getID() && !result.contains(group.getValue())) {
@@ -196,17 +200,17 @@ public class Database {
 			while(sc.hasNextLine()) {
 				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
-				
+
 				int groupId = Integer.parseInt(splitLine[0]);
 				User loggedUser = this.getUserByID(Integer.parseInt(splitLine[1]));
-				
+
 				String[] userIds = splitLine[2].split("-");
 				HashSet<Integer> users = new HashSet<>();
-				
+
 				for(String userId : userIds) {
 					users.add(Integer.parseInt(userId));
 				}
-				
+
 				Group group = new Group(groupId, loggedUser.getID(), users);
 				this.addGroup(group);
 			}
@@ -216,55 +220,57 @@ public class Database {
 	public void getGroupRequests() throws FileNotFoundException {
 		try(Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequests.txt"));) {
 			while(sc.hasNextLine()) {
-				
+
 				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
-				
+
 				Group group = this.getGroupByID(Integer.parseInt(splitLine[0]));
-				
+
 				String[] requestsString = splitLine[1].split(";");
-				
+
 				for(String requestString : requestsString) {
-					
-					String[] requestSplit = requestString.split("-");
-					
-					int requestID = Integer.parseInt(requestSplit[0]);
-					int amount = Integer.parseInt(requestSplit[1]);
-					int fromID = Integer.parseInt(requestSplit[2]);
-					
-					for(Integer toID: group.getUserList()) {
-						group.addRequest(new Request(requestID, amount, fromID, toID));
+					if (!requestString.isEmpty()) {
+						String[] requestSplit = requestString.split("-");
+
+						int requestID = Integer.parseInt(requestSplit[0]);
+						int amount = Integer.parseInt(requestSplit[1]);
+						int fromID = Integer.parseInt(requestSplit[2]);
+
+						for(Integer toID: group.getUserList()) {
+							group.addRequest(new Request(requestID, amount, fromID, toID));
+						}
 					}
 				}
-				this.addGroup(group);
 			}
 		}
 	}
-	
+
 	public void getGroupRequestHistory() throws FileNotFoundException {
 		try(Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequestHistory.txt"));) {
 			while(sc.hasNextLine()) {
-				
+
 				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
-				
+
 				Group group = this.getGroupByID(Integer.parseInt(splitLine[0]));
-				
+
 				String[] requestsString = splitLine[1].split(";");
-				
+
+				HashSet<Request> requests = new HashSet<>(); 
+
 				for(String requestString : requestsString) {
-					
+
 					String[] requestSplit = requestString.split("-");
-					
+
 					int requestID = Integer.parseInt(requestSplit[0]);
 					int amount = Integer.parseInt(requestSplit[1]);
 					int fromID = Integer.parseInt(requestSplit[2]);
-					
+
 					for(Integer toID: group.getUserList()) {
-						group.addRequest(new Request(requestID, amount, fromID, toID));
+						requests.add(new Request(requestID, amount, fromID, toID));
 					}
 				}
-				this.addGroup(group);
+				group.addRequestListToHistory(requests);
 			}
 		}
 	}
