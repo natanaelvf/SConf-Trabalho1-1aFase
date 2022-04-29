@@ -24,6 +24,7 @@ public class Database {
 	private HashMap<Integer,Request> requestBase = new HashMap<>();
 	private HashMap<Integer,Group> groupBase = new HashMap<>();
 	private HashMap<Integer,QRCode> qrCodeBase = new HashMap<>();
+	private Key privateKey;
 
 	Random r = new Random();
 
@@ -293,5 +294,9 @@ public class Database {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	public void setKey(Key pk) {
+		privateKey= pk;
 	}
 }

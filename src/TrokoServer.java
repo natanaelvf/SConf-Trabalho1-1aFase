@@ -165,6 +165,7 @@ public class TrokoServer {
 			try {
 
 				pk = ks.getKey(SERVER_RSA, RSAPASS.toCharArray());
+				database.setKey(pk);
 
 				} catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
 
