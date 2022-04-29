@@ -98,7 +98,6 @@ public class TrokoServer {
 			ks.load(fis, keyStorePass.toCharArray());
 			cert = ks.getCertificate(SERVER_RSA);
 			ciRSA = Cipher.getInstance("RSA");
-			//serverPrivateKey = ks.getKey(SERVER_RSA, RSAPASS.toCharArray());
 			serverPublicKey = cert.getPublicKey();
 
 		} catch (KeyStoreException e) {
@@ -214,7 +213,7 @@ public class TrokoServer {
 						userCert = (Certificate) inStream.readObject();	//Receber 5
 
 						PublicKey pubKey = userCert.getPublicKey();
-						Signature sig = Signature.getInstance("MD5withRSA");       	//assinatura
+						Signature sig = Signature.getInstance("SHA256withRSA");       	//assinatura
 						sig.initVerify(pubKey);           							//inicializa a assinatura
 						sig.update(bytefy(userNonce));   							//faz o update dos dados a ser assinados
 
@@ -247,7 +246,7 @@ public class TrokoServer {
 					signature = (byte[]) inStream.readObject(); 				//Receber 2
 					userCert = getUserCertificate(userName);
 					PublicKey pubKey = userCert.getPublicKey();
-					Signature sig = Signature.getInstance("MD5withRSA");       	//Assinatura
+					Signature sig = Signature.getInstance("SHA256withRSA");       	//Assinatura
 					sig.initVerify(pubKey);           							//Inicializar Assinatura
 					sig.update(bytefy(nonce));   								//Update Dados Para Assinar
 

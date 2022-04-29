@@ -144,7 +144,7 @@ public class Trokos {
 			System.out.print("Insert private key password:");
 			userPK = (PrivateKey)kstore.getKey(id+"RSA", sc.nextLine().toCharArray());
 
-			Signature signature = Signature.getInstance("MD5withRSA");
+			Signature signature = Signature.getInstance("SHA256withRSA");
 			signature.initSign(userPK);
 			byte[] buf = bytefy(nonce);
 			signature.update(buf);
@@ -159,6 +159,8 @@ public class Trokos {
 		sc.close();
 		return new byte[0];
 	}
+	
+	
 	private static byte[] bytefy(long nonce) {
 		return ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
 	}
@@ -307,30 +309,5 @@ public class Trokos {
 		}
 	}
 
-	public static String decryptMsg(byte[] dataToDecrypt, Key myKey) {
 
-		try {
-
-			ciAES.init(Cipher.DECRYPT_MODE, myKey);
-			byte[] textDecrypted = ciAES.doFinal(dataToDecrypt);
-			return new String(textDecrypted);
-
-		} catch (Exception e) {
-
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	public static byte[] encryptMsg(String dataToEncrypt, Key myKey) {
-
-		try {
-			byte[] text = dataToEncrypt.getBytes(UNICODE_FORMAT);
-			ciAES.init(Cipher.ENCRYPT_MODE, myKey);
-			return ciAES.doFinal(text);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return new byte[0];
-		}
-	}
 }

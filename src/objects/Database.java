@@ -277,22 +277,6 @@ public class Database {
 			}
 		}
 	}
-	public String decryptString(byte[] dataToDecrypt, Key myKey) {
-
-		try {
-
-			ciRSA.init(Cipher.DECRYPT_MODE, myKey);
-			byte[] textDecrypted = ciRSA.doFinal(dataToDecrypt);
-			String result = new String(textDecrypted);
-
-			return result;
-
-		} catch (Exception e) {
-
-			e.printStackTrace();
-			return null;
-		}
-	}
 	
 	public byte[] encryptString(String dataToEncrypt, Key myKey) {
 
