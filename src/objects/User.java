@@ -28,11 +28,7 @@ public class User {
 	public int getID() {
 		return userID;
 	}
-
-	public void setID(int id) {
-		this.userID = id;
-	}
-
+	
 	public HashSet<Request> getRequests() {
 		return requests;
 	}

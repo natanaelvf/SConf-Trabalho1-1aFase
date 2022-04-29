@@ -55,4 +55,12 @@ public class Request {
 		this.qrCode = qrCode;
 	}
 	
+	@Override
+	public String toString() {
+		return "ID: " + id +
+				"Amount: " + amount +
+				"From: " + fromID + 
+				"To: " + toID;
+	}
+	
 }

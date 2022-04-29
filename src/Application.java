@@ -1,11 +1,13 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 
 import com.google.zxing.WriterException;
 
@@ -51,11 +53,11 @@ public class Application {
 	 * @throws FileNotFoundException 
 	 */
 	public void makePayment(int userID, double amount) throws UserNotFoundException, InsuficientFundsException, FileNotFoundException {
-		User user = this.database.getUserByID(userID);
 		if (amount > this.loggedUser.getBalance()) {
 			throw new InsuficientFundsException(
 					"Erro ao transferir: Saldo Insuficiente na conta " + this.loggedUser.getID() + "!");
 		}
+		User user = this.database.getUserByID(userID);
 		if (user == null) {
 			throw new UserNotFoundException("Erro ao transferir: Utilizador" + userID + " nao existente!");
 		}
@@ -67,6 +69,8 @@ public class Application {
 		double toNewBalance = to.getBalance() + amount;
 
 		Scanner sc = new Scanner(new File(".\\src\\bds\\users.txt"));
+		PrintWriter printout = new PrintWriter(".\\src\\bds\\users.txt");
+		StringBuilder sb = new StringBuilder();
 
 		while(sc.hasNextLine()) {
 			String line = sc.nextLine();
@@ -75,13 +79,18 @@ public class Application {
 			int userId = Integer.parseInt(splitLine[0]);
 
 			if(userId == from.getID()) {
-				line.replaceAll(Double.toString(from.getBalance()), Double.toString(fromNewBalance));
-			}
-
-			if(userId == to.getID()) {
-				line.replaceAll(Double.toString(to.getBalance()), Double.toString(toNewBalance));
+				splitLine[1] = Double.toString(fromNewBalance);
+				sb.append(String.join(":", splitLine) + "\r\n");
+			} else if(userId == to.getID()) {
+				splitLine[1] = Double.toString(toNewBalance);
+				sb.append(String.join(":", splitLine) + "\r\n");
+			} else {
+				sb.append(line + "\r\n");
 			}
 		}
+		
+		printout.write(sb.toString());
+		printout.close();
 		from.setBalance(fromNewBalance);
 		to.setBalance(toNewBalance);
 		
@@ -216,8 +225,9 @@ public class Application {
 	 * 
 	 * @param groupID o id do grupo a criar
 	 * @throws GroupAleadyExistsException se o grupo com id groupID ja existir
+	 * @throws FileNotFoundException 
 	 */
-	public void newGroup(int groupID) throws GroupAleadyExistsException {
+	public void newGroup(int groupID) throws GroupAleadyExistsException, FileNotFoundException {
 		if (this.database.getGroupByID(groupID) != null) {
 			throw new GroupAleadyExistsException(
 					"Erro ao criar o grupo com id " + groupID + " : um grupo com esse id ja existe!");
@@ -238,9 +248,10 @@ public class Application {
 	 *                                     grupo
 	 * @throws UserAlreadyInGroupException se o utilizador userID ja estiver no
 	 *                                     grupo
+	 * @throws FileNotFoundException 
 	 */
 	public void addUserToGroup(int userID, int groupID)
-			throws UserNotFoundException, GroupNotFoundException, UserNotOwnerException, UserAlreadyInGroupException {
+			throws UserNotFoundException, GroupNotFoundException, UserNotOwnerException, UserAlreadyInGroupException, FileNotFoundException {
 		User user = this.database.getUserByID(userID);
 		if (user == null) {
 			throw new UserNotFoundException(
@@ -251,7 +262,7 @@ public class Application {
 			throw new GroupNotFoundException(
 					"Erro ao adicionar utilizador ao grupo: Grupo " + groupID + " nao encontrado!");
 		}
-		if (group.getUserList().contains(user)) {
+		if (group.getUserList().contains(userID)) {
 			throw new UserAlreadyInGroupException(
 					"Erro ao adicionar utilizador ao grupo: Utilizador " + userID + " ja no grupo!");
 		}
@@ -259,7 +270,7 @@ public class Application {
 			throw new UserNotOwnerException(
 					"Erro ao adicionar utilizador ao grupo: Utilizador logado nao e dono do grupo!");
 		}
-		group.addUser(database.getUserByID(userID));
+		group.addUser(userID);
 	}
 
 	/**
@@ -271,16 +282,16 @@ public class Application {
 	 *         pertence
 	 */
 	@SuppressWarnings("unchecked")
-	public HashSet<Group>[] viewGroups() {
-		HashSet<Group>[] result = new HashSet[2];
-		HashSet<Group> groupsUserOwns = this.database.getGroupsByOwner(this.loggedUser);
+	public Set<Group>[] viewGroups() {
+		Set<Group>[] result = new HashSet[2];
+		Set<Group> groupsUserOwns = this.database.getGroupsByOwner(this.loggedUser);
 
 		if (groupsUserOwns.isEmpty()) {
 			System.out.println("Utilizador logado nao e dono de nehum grupo!");
 		}
 
 		result[0] = groupsUserOwns;
-		HashSet<Group> groupsUserBelongs = this.database.getGroupsByClient(this.loggedUser);
+		Set<Group> groupsUserBelongs = this.database.getGroupsByClient(this.loggedUser);
 
 		if (groupsUserBelongs.isEmpty()) {
 			System.out.println("Utilizador logado nao e membro de nehum grupo!");
@@ -298,9 +309,10 @@ public class Application {
 	 * 
 	 * @throws InexistentGroupException se o grupo nao existir
 	 * @throws UserNotOwnerException    se o utilizador logado nao for dono do grupo
+	 * @throws FileNotFoundException 
 	 */
 	public void dividePayment(int groupID, int amount)
-			throws InexistentGroupException, InexistentGroupException, UserNotOwnerException {
+			throws InexistentGroupException, InexistentGroupException, UserNotOwnerException, FileNotFoundException {
 		Group group = this.database.getGroupByID(groupID);
 		if (group == null) {
 			throw new InexistentGroupException(
@@ -368,14 +380,12 @@ public class Application {
 		}
 		if (group.getOwnerUser() != this.loggedUser.getID()) {
 			throw new UserNotOwnerException("Erro ao mostrar o historico dos pagamentos do grupo: o utilizador "
-					+ "nao e dono do grupo " + groupID + "!");
+					+ " nao e dono do grupo " + groupID + "!");
 		}
 
-		ArrayList<HashSet<Request>> history = group.getRequestListHistory();
-		for (HashSet<Request> requests : history) {
-			for (Request request : requests) {
-				result.append(request.toString() + "\n");
-			}
+		HashSet<Request> history = group.getRequestListHistory();
+		for (Request request : history) {
+			result.append(request.toString() + "\n");
 		}
 		return result.toString();
 	}
@@ -385,7 +395,7 @@ public class Application {
 	}
 
 	public User getLoggedUser() {
-		return loggedUser;
+		return this.loggedUser;
 	}
 
 }

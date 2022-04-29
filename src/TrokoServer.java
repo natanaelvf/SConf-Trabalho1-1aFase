@@ -1,19 +1,26 @@
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.util.HashSet;
 import java.util.Random;
-import java.util.Scanner;
-
+import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
@@ -22,7 +29,6 @@ import com.google.zxing.WriterException;
 
 import exceptions.GroupAleadyExistsException;
 import exceptions.GroupNotFoundException;
-import exceptions.IllegalArgumentNumberException;
 import exceptions.InsuficientFundsException;
 import exceptions.QRCodeNotFoundException;
 import exceptions.RequestNotFoundException;
@@ -34,20 +40,6 @@ import objects.Database;
 import objects.Group;
 import objects.Request;
 import objects.User;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.SignatureException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import javax.xml.bind.DatatypeConverter;
 
 
 public class TrokoServer {
@@ -126,9 +118,10 @@ public class TrokoServer {
 			System.exit(-1);
 		}
 		
-		app.database.getGroupsFromDB();
 		app.database.getUsersFromDB();
-		app.database.getGroupRequests();
+		app.database.getGroupsFromDB();
+		app.database.getGroupRequestsFromDB();
+		app.database.getGroupRequestHistoryFromDB();
 
 		while (true) {
 			try {
@@ -356,9 +349,10 @@ public class TrokoServer {
 							app.requestPayment(requestee, amount, app.getLoggedUser().getID());
 							break;
 						case "v", "view":
+							HashSet<Request> requests = app.viewRequests();
 							System.out.println("Your requests are: ");
 							outStream.writeObject("Your requests are: ");
-							for (Request request : app.viewRequests()) {
+							for (Request request : requests) {
 								outStream.writeObject(request.toString() + "\n");
 								System.out.println(request.toString() + "\n");
 							}
@@ -388,7 +382,7 @@ public class TrokoServer {
 							outStream.writeObject("Added user: " + userToAdd + " to group" + groupToAddUser);
 							break;
 						case "g", "groups":
-							HashSet<Group>[] groups = app.viewGroups();
+							Set<Group>[] groups = app.viewGroups();
 							outStream.writeObject("User owns the following groups: ");
 							for (Group group : groups[0]) {
 								System.out.println(group.toString());

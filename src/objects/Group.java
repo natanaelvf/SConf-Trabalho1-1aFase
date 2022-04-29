@@ -1,7 +1,10 @@
 package objects;
 
-import java.util.ArrayList;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.HashSet;
+import java.util.Scanner;
 
 public class Group {
 
@@ -9,7 +12,7 @@ public class Group {
 	private int ownerUser;
 	private HashSet<Integer> userList;
 	private HashSet<Request> requestList;
-	private ArrayList<HashSet<Request>> requestListHistory;
+	private HashSet<Request> requestListHistory;
 
 	public Group(int groupID, int ownerUser, HashSet<Integer> userList) {
 		this.groupID = groupID;
@@ -21,51 +24,21 @@ public class Group {
 		return groupID;
 	}
 
-
-	public void setGroupID(int groupID) {
-		this.groupID = groupID;
-	}
-
-
 	public int getOwnerUser() {
 		return ownerUser;
 	}
-
-
-	public void setOwnerUser(int ownerUser) {
-		this.ownerUser = ownerUser;
-	}
-
 
 	public HashSet<Integer> getUserList() {
 		return userList;
 	}
 
-
-	public void setUserList(HashSet<Integer> userList) {
-		this.userList = userList;
-	}
-
-
 	public HashSet<Request> getRequestList() {
 		return requestList;
 	}
 
-
-	public void setRequestList(HashSet<Request> requestList) {
-		this.requestList = requestList;
-	}
-
-
-	public ArrayList<HashSet<Request>> getRequestListHistory() {
+	public HashSet<Request> getRequestListHistory() {
 		return requestListHistory;
 	}
-
-
-	public void setRequestListHistory(ArrayList<HashSet<Request>> requestListHistory) {
-		this.requestListHistory = requestListHistory;
-	}
-
 
 	@Override
 	public String toString() {
@@ -79,17 +52,100 @@ public class Group {
 		return sb.toString();
 	}
 
-	public void addUser(User userByID) {
-		// TODO Auto-generated method stub
+	public void addUser(int userToAdd) throws FileNotFoundException {
+		Scanner sc = new Scanner(new File(".\\src\\bds\\groups.txt"));
+
+		StringBuilder sb = new StringBuilder();
+
+		PrintWriter printout = new PrintWriter(".\\src\\bds\\groups.txt");
+
+		while (sc.hasNextLine()) {
+			String line = sc.nextLine();
+			String[] splitLine = line.split(":");
+			
+			sb.append(line);
+
+			int groupIDDB = Integer.parseInt(splitLine[0]);
+			if (this.groupID == groupIDDB) {
+				sb.append("-" + userToAdd);
+			}
+			sb.append("\r\n");
+		}
+
+		userList.add(userToAdd);
 		
+		printout.write(sb.toString());
+		printout.close();
 	}
 
-	public void addRequest(Request request) {
-		// TODO Auto-generated method stub
+	public void addRequest(Request request) throws FileNotFoundException {
+		PrintWriter printout = new PrintWriter(".\\src\\bds\\groupsRequests.txt");
+		Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequests.txt"));
+		StringBuilder sb = new StringBuilder();
+
+		while (sc.hasNextLine()) {
+			String line = sc.nextLine();
+			sb.append(line);
+			String[] splitLine = line.split(":");
+
+			int groupId = Integer.parseInt(splitLine[0]);
+			if (groupId == request.getToID()) {
+				sb.append(request.getId() + "-" + request.getFromID() + "-" + request.getAmount() + ";\r\n");
+			}
+		}
 		
+		printout.write(sb.toString());
+		printout.close();
+		sc.close();
+		
+		printout = new PrintWriter(".\\src\\bds\\users.txt");
+		sc = new Scanner(new File(".\\src\\bds\\users.txt"));
+		sb = new StringBuilder();
+
+		for(Integer userID : this.userList) {
+			while (sc.hasNextLine()) {
+				String line = sc.nextLine();
+				sb.append(line);
+				String[] splitLine = line.split(":");
+
+				int userIDDB = Integer.parseInt(splitLine[0]);
+				if (userID == userIDDB) {
+					sb.append(request.getId() + "-" + request.getFromID() + "-" + request.getAmount() + ";");
+				}
+				sb.append("\r\n");
+			}
+		}
+
+		printout.write(sb.toString());
+		printout.close();
+		sc.close();
 	}
 
-	public void addRequestListToHistory(HashSet<Request> requests) {
-		// TODO Auto-generated method stub
+	public void addRequestListToHistory(HashSet<Request> requests) throws FileNotFoundException {
+		PrintWriter printout = new PrintWriter(".\\src\\bds\\groupsRequestHistory.txt");
+		Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequestHistory.txt"));
+		StringBuilder sb = new StringBuilder();
+
+		while (sc.hasNextLine()) {
+			String line = sc.nextLine();
+			sb.append(line);
+			String[] splitLine = line.split(":");
+			
+			int groupId = Integer.parseInt(splitLine[0]);
+			for(Request request: requests) {
+				if (groupId == request.getToID()) {
+					sb.append(request.getId() + "-" + request.getFromID() + "-" + request.getAmount() + ";");
+				}
+			}
+			sb.append("\r\n");
+		}
+		
+		printout.write(sb.toString());
+		printout.close();
+		sc.close();
+	}
+
+	public void setRequestList(HashSet<Request> requestList) {
+		this.requestList = requestList;
 	}
 }
