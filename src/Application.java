@@ -30,7 +30,7 @@ import objects.User;
 
 public class Application {
 
-	public Database database;
+	private Database database;
 	private User loggedUser;
 
 	/**
@@ -89,12 +89,12 @@ public class Application {
 				sb.append(line + "\r\n");
 			}
 		}
-		
+
 		printout.write(sb.toString());
 		printout.close();
 		from.setBalance(fromNewBalance);
 		to.setBalance(toNewBalance);
-		
+
 		sc.close();
 	}
 
@@ -124,7 +124,7 @@ public class Application {
 	 * @return a lista de pedidos de pagamentos pendentes
 	 */
 
-	public HashSet<Request> viewRequests() {
+	public Set<Request> viewRequests() {
 		return this.loggedUser.getRequests();
 	}
 
@@ -159,11 +159,11 @@ public class Application {
 		User from = this.database.getUserByID(request.getFromID());
 		double fromNewBalance = from.getBalance() - request.getAmount();
 		from.setBalance(fromNewBalance);
-		
+
 		User to = this.database.getUserByID(request.getToID());
 		double toNewBalance = to.getBalance() + request.getAmount();
 		to.setBalance(toNewBalance);
-		
+
 		this.database.removeRequest(request);
 		this.loggedUser.removeRequest(request);
 	}
@@ -233,7 +233,7 @@ public class Application {
 			throw new GroupAleadyExistsException(
 					"Erro ao criar o grupo com id " + groupID + " : um grupo com esse id ja existe!");
 		}
-		Group group = new Group(groupID, this.loggedUser.getID(), new HashSet<Integer>());
+		Group group = new Group(groupID, this.loggedUser.getID(), new HashSet<>());
 		this.database.addGroup(group);
 	}
 
@@ -282,7 +282,6 @@ public class Application {
 	 *         utilizador e dono result[1] tem os elementos a que o utilizador
 	 *         pertence
 	 */
-	@SuppressWarnings("unchecked")
 	public List<Set<Group>> viewGroups() {
 		List<Set<Group>> result = new ArrayList<>();
 		Set<Group> groupsUserOwns = this.database.getGroupsByOwner(this.loggedUser);
@@ -313,7 +312,7 @@ public class Application {
 	 * @throws FileNotFoundException 
 	 */
 	public void dividePayment(int groupID, int amount)
-			throws InexistentGroupException, InexistentGroupException, UserNotOwnerException, FileNotFoundException {
+			throws InexistentGroupException, UserNotOwnerException, FileNotFoundException {
 		Group group = this.database.getGroupByID(groupID);
 		if (group == null) {
 			throw new InexistentGroupException(
@@ -326,7 +325,7 @@ public class Application {
 
 		HashSet<Integer> usersInGroup = group.getUserList();
 		DecimalFormat df = new DecimalFormat("0.00");
-		double amountPerMember = amount / usersInGroup.size();
+		double amountPerMember = (double) amount / usersInGroup.size();
 		double roundedAmount = Double.parseDouble(df.format(amountPerMember));
 
 		for (Integer userId : usersInGroup) {
@@ -399,4 +398,12 @@ public class Application {
 		return this.loggedUser;
 	}
 
+	public Database getDatabase() {
+		return this.database;
+	}
+
+	public void setDatabase(Database database) {
+		this.database = database;
+
+	}
 }

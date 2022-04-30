@@ -18,7 +18,6 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -45,20 +44,17 @@ import objects.User;
 
 public class TrokoServer {
 
-	public static Application app = new Application();
-	public static Database database = new Database();
-	private static String keyStore;
-	private static String keyStorePass;
-	
+	static Application app;
+	private static Database database;
+
+	public static final String RSA = "RSA/None/OAEPWITHSHA-256ANDMGF1PADDING";
+
 	private static Key serverPublicKey;
-	
+
 	private static Cipher ciRSA;
-	private static Certificate cert;
 	private static KeyStore ks;
 	private static final String SERVER_RSA = "serverRSA";
-	private static final String RSAPASS = "rsapassserver";
-
-
+	private static final String RSAPASS = "123.Asp1rin2.";
 
 	public static void main(String[] args) throws IOException {
 
@@ -77,21 +73,16 @@ public class TrokoServer {
 
 		server.startServer(port);
 	}
-	private static void init (String keystore, String keystorePassword) {
-		keyStore = keystore;
-		keyStorePass = keystorePassword;
 
+	private static void init (String keyStore, String keyStorePassword) {
 		try {
-
 			ks = KeyStore.getInstance("JCEKS");
 			FileInputStream fis = new FileInputStream(keyStore);
-			ks.load(fis, keyStorePass.toCharArray());
-			cert = ks.getCertificate(SERVER_RSA);
-			ciRSA = Cipher.getInstance("RSA");
+			ks.load(fis, keyStorePassword.toCharArray());
+			Certificate cert = ks.getCertificate(SERVER_RSA);
+			ciRSA = Cipher.getInstance(RSA);
 			serverPublicKey = cert.getPublicKey();
-
 		} catch (KeyStoreException e) {
-
 			System.out.println("Error getting KeyStore instance.");
 			System.exit(-1);
 		} catch (IOException | NoSuchAlgorithmException | CertificateException e) {
@@ -107,48 +98,50 @@ public class TrokoServer {
 
 
 	public void startServer(int port) throws IOException {
-		ServerSocket sSoc = null;
+		try (ServerSocket sSoc = new ServerSocket(port)){
 
-		try {
-			sSoc = new ServerSocket(port);
+			Application app = new Application();
+			app.setDatabase(new Database());
+			database = new Database();
+
+
+			app.getDatabase().getUsersFromDB();
+			app.getDatabase().getGroupsFromDB();
+			app.getDatabase().getGroupRequestsFromDB();
+			app.getDatabase().getGroupRequestHistoryFromDB();
+
+			while (true) {
+				try {
+					Socket inSoc = sSoc.accept();
+					ServerThread newServerThread = new ServerThread(inSoc);
+					newServerThread.start();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(-1);
 		}
-		
-		app.database.getUsersFromDB();
-		app.database.getGroupsFromDB();
-		app.database.getGroupRequestsFromDB();
-		app.database.getGroupRequestHistoryFromDB();
-
-		while (true) {
-			try {
-				Socket inSoc = sSoc.accept();
-				ServerThread newServerThread = new ServerThread(inSoc);
-				newServerThread.start();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 	}
-	
-
-	
 	private class ServerThread extends Thread {
 
 		private Socket socket = null;
 		ObjectOutputStream outStream;
 		ObjectInputStream inStream;
 
+		Random random = new Random();
+
 		ServerThread(Socket inSoc) {
 			socket = inSoc;
 		}
+		@Override
 		public void run() {
 
 			int userID = 0;
 			User user;
 			String userName = "";
-			Random random = new Random();
+
 			long nonce;
 			boolean flag;
 
@@ -158,7 +151,7 @@ public class TrokoServer {
 				pk = ks.getKey(SERVER_RSA, RSAPASS.toCharArray());
 				database.setKey(pk);
 
-				} catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
+			} catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
 
 				System.out.println("Error getting Server Private Key");
 				System.exit(-1);
@@ -237,41 +230,40 @@ public class TrokoServer {
 
 					signature = (byte[]) inStream.readObject(); 				//Receber 2
 					userCert = getUserCertificate(userName);
-					PublicKey pubKey = userCert.getPublicKey();
-					Signature sig = Signature.getInstance("SHA256withRSA");       	//Assinatura
-					sig.initVerify(pubKey);           							//Inicializar Assinatura
-					sig.update(bytefy(nonce));   								//Update Dados Para Assinar
 
-					if (sig.verify(signature)) {       							//Assinatura Valida
+					if(userCert != null) {
+						PublicKey pubKey = userCert.getPublicKey();
+						Signature sig = Signature.getInstance("SHA256withRSA");       	//Assinatura
+						sig.initVerify(pubKey);           							//Inicializar Assinatura
+						sig.update(bytefy(nonce));   								//Update Dados Para Assinar
 
-						System.out.println("User Authenticated.");
-						outStream.writeObject(true);							//Enviar 3
-						authenticatedRun(userID);
-					} else {
+						if (sig.verify(signature)) {       							//Assinatura Valida
 
-						outStream.writeObject(false);							//Enviar 3
-						System.out.println("Error authenticating User.");
+							System.out.println("User Authenticated.");
+							outStream.writeObject(true);							//Enviar 3
+							authenticatedRun(userID);
+						} else {
+
+							outStream.writeObject(false);							//Enviar 3
+							System.out.println("Error authenticating User.");
+						}
 					}
 				}
 
-				outStream.close();		//Fechar objeto out
-				inStream.close();		//Fechar objeto in
-				socket.close();			//Fechar socket cliente
+				outStream.close();
+				inStream.close();
+				socket.close();
 
-			} catch (IOException | ClassNotFoundException | SignatureException | NoSuchAlgorithmException | InvalidKeyException e) {
+			} catch (IOException | ClassNotFoundException | SignatureException | NoSuchAlgorithmException | InvalidKeyException | CertificateException e) {
 				System.out.println("Error registering/authenticating User.");
 			}
 		}
-		
-		
-		private byte[] bytefy(long nonce) {
 
-			byte[] bytes = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
-			return bytes;
+		private byte[] bytefy(long nonce) {
+			return ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
 		}
-		
-		
-		private Certificate getUserCertificate(String name) {
+
+		private Certificate getUserCertificate(String name) throws CertificateException, IOException {
 
 			String getCert = "PubKeys\\" + name + "RSApub.cer";
 
@@ -280,43 +272,34 @@ public class TrokoServer {
 
 				fact = CertificateFactory.getInstance("X509");
 
-				FileInputStream fis;
-				try {
+				try (FileInputStream fis  = new FileInputStream(getCert);){
 
-					fis = new FileInputStream(getCert);
+					Certificate cer = fact.generateCertificate(fis);
+					if (cer == null) {
 
-					try {
-
-						Certificate cer = fact.generateCertificate(fis);
-						if (cer == null) {
-
-							System.out.println("Error getting Certificate");
-						}
-						return cer;
-					} catch (CertificateException e) {
-
-						System.out.println("Error generating Certificate.");
+						System.out.println("Error getting Certificate");
 					}
-				} catch (FileNotFoundException e) {
+					return cer;
+				} catch (CertificateException e) {
 
-					System.out.println("Error finding Certificate.");
+					System.out.println("Error generating Certificate.");
 				}
-			} catch (CertificateException e1) {
+			} catch (FileNotFoundException e) {
 
-				System.out.println("Error getting Certificate.");
+				System.out.println("Error finding Certificate.");
 			}
+
 			System.out.println("Error getting Certificate. Returning null");
 			return null;
 		}
 
-		public void authenticatedRun(int ID) {
-			int userId = ID;
+		public void authenticatedRun(int id) {
+			int userId = id;
 			try {
 				outStream = new ObjectOutputStream(socket.getOutputStream());
 				inStream = new ObjectInputStream(socket.getInputStream());
-				User loggedUser = app.database.getUserByID(userId);
+				User loggedUser = app.getDatabase().getUserByID(userId);
 				app.setLoggedUser(loggedUser);
-				
 
 				String input = (String) inStream.readObject();
 
@@ -328,93 +311,93 @@ public class TrokoServer {
 						switch (data[0]) {
 						case "b", "balance":
 							String b = "Your balance is: " + app.viewBalance();
-							outStream.writeObject(b);
-							System.out.println(b);
-							break;
+						outStream.writeObject(b);
+						System.out.println(b);
+						break;
 						case "m", "makepayment":
 							int userToPay = Integer.parseInt(data[1]);
-							amount = Double.parseDouble(data[2]);
-							app.makePayment(userToPay, amount);
-							String p = "Paid " + amount + " to user" + loggedUser.getID() + "\n";
-							outStream.writeObject(p);
-							break;
+						amount = Double.parseDouble(data[2]);
+						app.makePayment(userToPay, amount);
+						String p = "Paid " + amount + " to user" + loggedUser.getID() + "\n";
+						outStream.writeObject(p);
+						break;
 						case "r", "requestpayment" :
 							int requestee = Integer.parseInt(data[1]);
-							amount = Double.parseDouble(data[2]);
-							app.requestPayment(requestee, amount, app.getLoggedUser().getID());
-							break;
+						amount = Double.parseDouble(data[2]);
+						app.requestPayment(requestee, amount, app.getLoggedUser().getID());
+						break;
 						case "v", "view":
-							HashSet<Request> requests = app.viewRequests();
-							System.out.println("Your requests are: ");
-							outStream.writeObject("Your requests are: ");
-							for (Request request : requests) {
-								outStream.writeObject(request.toString() + "\n");
-								System.out.println(request.toString() + "\n");
-							}
-							break;
+							Set<Request> requests = app.viewRequests();
+						System.out.println("Your requests are: ");
+						outStream.writeObject("Your requests are: ");
+						for (Request request : requests) {
+							outStream.writeObject(request.toString() + "\n");
+							System.out.println(request.toString() + "\n");
+						}
+						break;
 						case "o", "obtain":
 							double code = Double.parseDouble(data[1]);
-							String o = "Your code has ID: " + code;
-							System.out.println(o);
-							outStream.writeObject(o);
-							app.obtainQRcode(code, loggedUser.getID());
-							break;
+						String o = "Your code has ID: " + code;
+						System.out.println(o);
+						outStream.writeObject(o);
+						app.obtainQRcode(code, loggedUser.getID());
+						break;
 						case "c", "confirm":
-							System.out.println(app.database.getQRCodeByID(Integer.parseInt(data[1])));
-							app.confirmQRcode(app.database.getQRCodeByID(Integer.parseInt(data[1])));
-							break;
+							System.out.println(app.getDatabase().getQRCodeByID(Integer.parseInt(data[1])));
+						app.confirmQRcode(app.getDatabase().getQRCodeByID(Integer.parseInt(data[1])));
+						break;
 						case "n", "newgroup":
 							int groupID = Integer.parseInt(data[1]);
-							app.newGroup(groupID);
-							System.out.println("New group created with ID: " + groupID);
-							outStream.writeObject("New group created with ID: " + groupID);
-							break;
+						app.newGroup(groupID);
+						System.out.println("New group created with ID: " + groupID);
+						outStream.writeObject("New group created with ID: " + groupID);
+						break;
 						case "a", "addu":
 							int groupToAddUser = Integer.parseInt(data[1]);
-							int userToAdd = Integer.parseInt(data[2]);
-							app.addUserToGroup(groupToAddUser, userToAdd);
-							System.out.println("Added user: " + userToAdd + " to group" + groupToAddUser);
-							outStream.writeObject("Added user: " + userToAdd + " to group" + groupToAddUser);
-							break;
+						int userToAdd = Integer.parseInt(data[2]);
+						app.addUserToGroup(groupToAddUser, userToAdd);
+						System.out.println("Added user: " + userToAdd + " to group" + groupToAddUser);
+						outStream.writeObject("Added user: " + userToAdd + " to group" + groupToAddUser);
+						break;
 						case "g", "groups":
 							List<Set<Group>> groups = app.viewGroups();
-							outStream.writeObject("User owns the following groups: ");
-							for (Group group : groups.get(0)) {
-								System.out.println(group.toString());
-								outStream.writeObject(group.toString());
-							}
-							outStream.writeObject("User is in the following groups: ");
-							for (Group group :  groups.get(1)) {
-								System.out.println(group.toString());
-								outStream.writeObject(group.toString());
-							}
-							break;
+						outStream.writeObject("User owns the following groups: ");
+						for (Group group : groups.get(0)) {
+							System.out.println(group.toString());
+							outStream.writeObject(group.toString());
+						}
+						outStream.writeObject("User is in the following groups: ");
+						for (Group group :  groups.get(1)) {
+							System.out.println(group.toString());
+							outStream.writeObject(group.toString());
+						}
+						break;
 						case "s", "status":
 							int groupToCheck = Integer.parseInt(data[1]);
-							System.out.println(
-									"The following requests for the group" + groupToCheck + " are still to be paid: ");
-							outStream.writeObject(
-									"The following requests for the group" + groupToCheck + " are still to be paid: ");
-							System.out.println(app.statusPayments(groupToCheck));
-							outStream.writeObject(app.statusPayments(groupToCheck));
-							break;
+						System.out.println(
+								"The following requests for the group" + groupToCheck + " are still to be paid: ");
+						outStream.writeObject(
+								"The following requests for the group" + groupToCheck + " are still to be paid: ");
+						System.out.println(app.statusPayments(groupToCheck));
+						outStream.writeObject(app.statusPayments(groupToCheck));
+						break;
 						case "h", "history":
 							System.out.println(app.viewHistory(Integer.parseInt(data[1])));
-							outStream.writeObject(app.viewHistory(Integer.parseInt(data[1])));
-							break;
+						outStream.writeObject(app.viewHistory(Integer.parseInt(data[1])));
+						break;
 						case "pay", "payrequest":
 							int requestId = Integer.parseInt(data[1]);
-							System.out.println("The request with ID: " + requestId + " will be paid");
-							outStream.writeObject("The request with ID: " + requestId + " will be paid");
-							app.payRequest(requestId);
-							break;
+						System.out.println("The request with ID: " + requestId + " will be paid");
+						outStream.writeObject("The request with ID: " + requestId + " will be paid");
+						app.payRequest(requestId);
+						break;
 						default:
 							outStream.writeObject("Invalid command!");
 						}
 						input = (String) inStream.readObject();
 					}
 
-				} catch (IOException e) {
+				} catch (IOException | NumberFormatException | WriterException e) {
 					e.printStackTrace();
 				} catch (UserNotFoundException e) {
 					try {
@@ -429,8 +412,6 @@ public class TrokoServer {
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
-					e.printStackTrace();
-				} catch (NumberFormatException | WriterException e) {
 					e.printStackTrace();
 				} catch (GroupAleadyExistsException e) {
 					try {
@@ -493,18 +474,18 @@ public class TrokoServer {
 				}
 			}
 		}
-		
-		private boolean userExists(int userID) {
-			
-			User u=database.getUserByID(userID);
-			if (u.getID() == userID) {
-					return true;
-			}
-			return false;
-		}
 
-		
+		private boolean userExists(int userID) {
+			User u = database.getUserByID(userID);
+			return u != null && u.getID() == userID;
+		}
+	}
+	public static Application getApplication() {
+		return app;
 	}
 
+	public static Database getDatabase() {
+		return database;
+	}
 }
 

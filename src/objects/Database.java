@@ -221,7 +221,7 @@ public class Database {
 
 	public void getGroupsFromDB() throws FileNotFoundException {
 		Scanner sc = new Scanner(new File(".\\src\\bds\\groups.txt"));
-		
+
 		while (sc.hasNextLine()) {
 			String line = sc.nextLine();
 			String[] splitLine = line.split(":");

@@ -30,7 +30,7 @@ import objects.User;
 
 public class Trokos {
 
-	static Application app = TrokoServer.app;
+	public static final String RSA = "RSA/None/OAEPWITHSHA-256ANDMGF1PADDING";
 	static ObjectOutputStream outStream;
 	static ObjectInputStream  inStream;
 	static Socket clientSocket;
@@ -44,25 +44,23 @@ public class Trokos {
 	private static String userID;
 
 	private static PrivateKey userPK;
-	private static Database database;
 	private static final String UNICODE_FORMAT = "UTF-8";
 
 	public static void main(String[] args) throws NumberFormatException,
 	IOException, ClassNotFoundException {
 
 		if (args.length != 5) {    //Se nao tiver os argumentos obrigatorios
-
 			System.out.println("Usage format: Trokos <serverAddress> <truststore> <keystore> <keystore-password> <clientID>");
 			System.exit(-1);
 		} 
-		Scanner sc= new Scanner(System.in);
 		String[] serverAddress = args[0].split(":");
-		int portServer = Integer.parseInt(serverAddress[1]); 				//Port do servidor
-		try {
+		int serverPort = Integer.parseInt(args[0].split(":")[1]); 				//Port do servidor
+
+		try(Socket clientSocket = new Socket(serverAddress[0], serverPort)) {
 
 			//SocketFactory socFac = SSLSocketFactory.getDefault(); //SSL
-			//SSLSocket clientSocket = (SSLSocket) socFac.createSocket(serverAddress[0], portServer); //Socket a conectar  //SSL
-			Socket clientSocket = new Socket(serverAddress[0], portServer);
+			//SSLSocket clientSocket = (SSLSocket) socFac.createSocket(serverAddress[0], serverPort); //Socket a conectar  //SSL
+
 			//clientSocket.startHandshake();	//SSL
 			System.out.println("Connected to server.");
 
@@ -72,66 +70,55 @@ public class Trokos {
 
 			init(args[2], args[3], args[4]);
 
-			outStream.writeObject(userID);     			//Enviar 1
+			outStream.writeObject(userID);     						//Enviar 1
 			System.out.println("Id sent.");
 
 			long nonce = (long) inStream.readObject();    			//Receber 1
-			System.out.println("Nonce recieved.");
+			System.out.println("Nonce received.");
 			boolean flag = (boolean) inStream.readObject();			//Receber 2
-			System.out.println("Flag recieved.");
+			System.out.println("Flag received.");
 
 			if (!flag) { 											//Utilizador por registar
-
 				System.out.println("Registering User.");
 				System.out.print("Insert Name:");
+				Scanner sc = new Scanner(System.in);
 				String userName = sc.nextLine(); 					//Nome do utilizador
-				outStream.writeObject(userName);											//Enviar 2
 
+				outStream.writeObject(userName);											//Enviar 2
 				outStream.writeObject(nonce);												//Enviar 3
 				outStream.writeObject(signNonce(userID, nonce, keyStore, keyStorePass));	//Enviar 4
 				outStream.writeObject(getUserCertificate(userID));						    //Enviar 5
 
 				boolean aut = (boolean) inStream.readObject();	//Receber 3
 				if(!aut) {
-
 					System.out.println("Error creating user."); 
 					sc.close();
-					clientSocket.close();
 					System.exit(-1);
 				}
 				System.out.println("User created and authenticated.");
-
 			} else {									//Utilizador ja esta registado
-
 				outStream.writeObject(signNonce(userID, nonce, keyStore, keyStorePass));	//Enviar 2	
 				System.out.println("Signed Nonce sent.");
 
 				boolean aut = (boolean) inStream.readObject();	//Receber 3
 				if(!aut) {
-
 					System.out.println("Error athenticating user.");
-					sc.close();
-					clientSocket.close();
 					System.exit(-1);
 				}
 			}
 			String answer = (String)inStream.readObject(); //
 			System.out.println(answer);
-
-			User loggedUser = app.database.getUserByID(Integer.parseInt(userID));
-
+			Application app = TrokoServer.getApplication();
+			Database database = TrokoServer.getDatabase();
+			User loggedUser = database.getUserByID(Integer.parseInt(userID));
 			app.setLoggedUser(loggedUser);
 
-
 			Trokos client = new Trokos();
-			client.startClient(serverAddress[1]);
-
+			client.startClient();
 		} catch (IOException e) {
-
 			System.out.println("Error: Connection closed.");
 			System.exit(-1);			
 		}
-		sc.close();
 		clientSocket.close();
 	}
 	private static byte[] signNonce(String id, long nonce, String ks, String ksPass) throws IOException {
@@ -159,8 +146,8 @@ public class Trokos {
 		sc.close();
 		return new byte[0];
 	}
-	
-	
+
+
 	private static byte[] bytefy(long nonce) {
 		return ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(nonce).array();
 	}
@@ -170,7 +157,7 @@ public class Trokos {
 
 		try {
 
-			ciRSA = Cipher.getInstance("RSA");
+			ciRSA = Cipher.getInstance(RSA);
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
 
 			System.out.println("Error with RSA Cipher.");
@@ -179,7 +166,7 @@ public class Trokos {
 
 		try {
 
-			ciAES = Cipher.getInstance("AES");
+			ciAES = Cipher.getInstance("AES/GCM/NoPadding");
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
 
 			System.out.println("Error with RSA Cipher.");
@@ -210,7 +197,7 @@ public class Trokos {
 	}
 
 
-	private void startClient(String serverAdress) throws IOException, ClassNotFoundException {
+	private void startClient() throws IOException, ClassNotFoundException {
 		Scanner sc = new Scanner(System.in);
 		printHelp();
 		String userInput = sc.nextLine();
@@ -257,18 +244,14 @@ public class Trokos {
 
 
 
-	private static Certificate getUserCertificate(String name) {
+	private static Certificate getUserCertificate(String name) throws IOException {
 
 		String getCert = "PubKeys\\" + name + "RSApub.cer";
 
 		CertificateFactory fact;
 		try {
-
 			fact = CertificateFactory.getInstance("X509");
-
-			FileInputStream fis;
-			try {
-				fis = new FileInputStream(getCert);
+			try(FileInputStream fis = new FileInputStream(getCert);) {
 				try {
 					return fact.generateCertificate(fis);
 				} catch (CertificateException e) {
@@ -279,7 +262,6 @@ public class Trokos {
 				System.out.println("Error finding Certificate.");
 			}
 		} catch (CertificateException e1) {
-
 			System.out.println("Error getting Certificate.");
 		}
 		System.out.println("Error getting Certificate. Returning null");
@@ -288,7 +270,7 @@ public class Trokos {
 
 	public static Key unwrapKey(byte[] symKey) throws InvalidKeyException {
 		try {
-			Cipher cipher = Cipher.getInstance("RSA");
+			Cipher cipher = Cipher.getInstance(RSA);
 			cipher.init(Cipher.UNWRAP_MODE, userPK);
 			return cipher.unwrap(symKey, "RSA", Cipher.SECRET_KEY);
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
@@ -300,7 +282,7 @@ public class Trokos {
 
 	public static byte[] wrapKey(PublicKey pubKey, SecretKey symKey) throws InvalidKeyException, IllegalBlockSizeException {
 		try {
-			Cipher cipher = Cipher.getInstance("RSA");
+			Cipher cipher = Cipher.getInstance(RSA);
 			cipher.init(Cipher.WRAP_MODE, pubKey);
 			return cipher.wrap(symKey);
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
@@ -308,6 +290,4 @@ public class Trokos {
 			return new byte[0];
 		}
 	}
-
-
 }
