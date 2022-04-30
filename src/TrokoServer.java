@@ -19,6 +19,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
@@ -49,10 +50,7 @@ public class TrokoServer {
 	private static String keyStore;
 	private static String keyStorePass;
 	
-	
 	private static Key serverPublicKey;
-	
-
 	
 	private static Cipher ciRSA;
 	private static Certificate cert;
@@ -311,9 +309,6 @@ public class TrokoServer {
 			return null;
 		}
 
-
-
-
 		public void authenticatedRun(int ID) {
 			int userId = ID;
 			try {
@@ -382,14 +377,14 @@ public class TrokoServer {
 							outStream.writeObject("Added user: " + userToAdd + " to group" + groupToAddUser);
 							break;
 						case "g", "groups":
-							Set<Group>[] groups = app.viewGroups();
+							List<Set<Group>> groups = app.viewGroups();
 							outStream.writeObject("User owns the following groups: ");
-							for (Group group : groups[0]) {
+							for (Group group : groups.get(0)) {
 								System.out.println(group.toString());
 								outStream.writeObject(group.toString());
 							}
 							outStream.writeObject("User is in the following groups: ");
-							for (Group group : groups[1]) {
+							for (Group group :  groups.get(1)) {
 								System.out.println(group.toString());
 								outStream.writeObject(group.toString());
 							}

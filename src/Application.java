@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -282,22 +283,22 @@ public class Application {
 	 *         pertence
 	 */
 	@SuppressWarnings("unchecked")
-	public Set<Group>[] viewGroups() {
-		Set<Group>[] result = new HashSet[2];
+	public List<Set<Group>> viewGroups() {
+		List<Set<Group>> result = new ArrayList<>();
 		Set<Group> groupsUserOwns = this.database.getGroupsByOwner(this.loggedUser);
 
 		if (groupsUserOwns.isEmpty()) {
 			System.out.println("Utilizador logado nao e dono de nehum grupo!");
 		}
 
-		result[0] = groupsUserOwns;
+		result.add(groupsUserOwns);
 		Set<Group> groupsUserBelongs = this.database.getGroupsByClient(this.loggedUser);
 
 		if (groupsUserBelongs.isEmpty()) {
 			System.out.println("Utilizador logado nao e membro de nehum grupo!");
 		}
 
-		result[1] = groupsUserBelongs;
+		result.add(groupsUserBelongs);
 		return result;
 	}
 
