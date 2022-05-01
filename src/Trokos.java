@@ -18,6 +18,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.util.Arrays;
 import java.util.Scanner;
 
 import javax.crypto.Cipher;
@@ -40,19 +41,17 @@ public class Trokos {
 	private static Cipher ciRSA;
 	private static Cipher ciAES;
 	private static Certificate cert;
-	private static KeyStore ks;
 	private static String userID;
 
 	private static PrivateKey userPK;
-	private static final String UNICODE_FORMAT = "UTF-8";
 
 	public static void main(String[] args) throws NumberFormatException,
 	IOException, ClassNotFoundException {
-
 		if (args.length != 5) {    //Se nao tiver os argumentos obrigatorios
 			System.out.println("Usage format: Trokos <serverAddress> <truststore> <keystore> <keystore-password> <clientID>");
 			System.exit(-1);
 		} 
+
 		String[] serverAddress = args[0].split(":");
 		int serverPort = Integer.parseInt(args[0].split(":")[1]); 				//Port do servidor
 
@@ -108,10 +107,12 @@ public class Trokos {
 			}
 			String answer = (String)inStream.readObject(); //
 			System.out.println(answer);
-			Application app = TrokoServer.getApplication();
-			Database database = TrokoServer.getDatabase();
-			User loggedUser = database.getUserByID(Integer.parseInt(userID));
-			app.setLoggedUser(loggedUser);
+
+
+			//			Application app = TrokoServer.getApplication();
+			//			Database database = TrokoServer.getDatabase();
+			//			User loggedUser = database.getUserByID(Integer.parseInt(userID));
+			//			app.setLoggedUser(loggedUser);
 
 			Trokos client = new Trokos();
 			client.startClient();
@@ -154,7 +155,6 @@ public class Trokos {
 
 
 	private static void init(String keystore, String keystorePassword, String id) {
-
 		try {
 
 			ciRSA = Cipher.getInstance(RSA);
@@ -178,8 +178,7 @@ public class Trokos {
 		keyStorePass = keystorePassword;
 
 		try {
-
-			ks = KeyStore.getInstance("JCEKS");
+			KeyStore ks = KeyStore.getInstance("JCEKS");
 			try (FileInputStream fis = new FileInputStream(keyStore)) {
 
 				ks.load(fis, keyStorePass.toCharArray());
@@ -246,7 +245,7 @@ public class Trokos {
 
 	private static Certificate getUserCertificate(String name) throws IOException {
 
-		String getCert = "PubKeys\\" + name + "RSApub.cer";
+		String getCert = "..\\PubKeys\\" + name + "RSApub.cer";
 
 		CertificateFactory fact;
 		try {

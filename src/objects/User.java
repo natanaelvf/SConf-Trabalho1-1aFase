@@ -1,13 +1,14 @@
 package objects;
 
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.Set;
 
 public class User {
 	private int userID;
 	private double balance;
-	private HashSet<Request> requests;
+	private Set<Request> requests;
 
-	public User(int userID, double balance, HashSet<Request> requests) {
+	public User(int userID, double balance, Set<Request> requests) {
 		this.userID = userID;
 		this.balance = balance;
 		this.requests = requests;
@@ -29,12 +30,17 @@ public class User {
 		return userID;
 	}
 	
-	public HashSet<Request> getRequests() {
+	public Set<Request> getRequests() {
 		return requests;
 	}
 
 	public void removeRequest(Request request) {
 		this.requests.remove(request);
+	}
+
+	@Override
+	public String toString() {
+		return "User [userID=" + userID + ", balance=" + balance + ", requests=" + Arrays.toString(requests.toArray()) + "]";
 	}
 
 }

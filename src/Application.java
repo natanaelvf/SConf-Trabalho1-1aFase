@@ -69,33 +69,29 @@ public class Application {
 		double fromNewBalance = from.getBalance() - amount;
 		double toNewBalance = to.getBalance() + amount;
 
-		Scanner sc = new Scanner(new File(".\\src\\bds\\users.txt"));
-		PrintWriter printout = new PrintWriter(".\\src\\bds\\users.txt");
-		StringBuilder sb = new StringBuilder();
+		try(Scanner sc = new Scanner(new File(".\\src\\bds\\users.txt"));
+		PrintWriter printout = new PrintWriter(".\\src\\bds\\users.txt");) {
+			StringBuilder sb = new StringBuilder();
+			while(sc.hasNextLine()) {
+				String line = sc.nextLine();
+				String[] splitLine = line.split(":");
 
-		while(sc.hasNextLine()) {
-			String line = sc.nextLine();
-			String[] splitLine = line.split(":");
+				int userId = Integer.parseInt(splitLine[0]);
 
-			int userId = Integer.parseInt(splitLine[0]);
-
-			if(userId == from.getID()) {
-				splitLine[1] = Double.toString(fromNewBalance);
-				sb.append(String.join(":", splitLine) + "\r\n");
-			} else if(userId == to.getID()) {
-				splitLine[1] = Double.toString(toNewBalance);
-				sb.append(String.join(":", splitLine) + "\r\n");
-			} else {
-				sb.append(line + "\r\n");
+				if(userId == from.getID()) {
+					splitLine[1] = Double.toString(fromNewBalance);
+					sb.append(String.join(":", splitLine) + "\r\n");
+				} else if(userId == to.getID()) {
+					splitLine[1] = Double.toString(toNewBalance);
+					sb.append(String.join(":", splitLine) + "\r\n");
+				} else {
+					sb.append(line + "\r\n");
+				}
 			}
+			printout.write(sb.toString());
+			from.setBalance(fromNewBalance);
+			to.setBalance(toNewBalance);
 		}
-
-		printout.write(sb.toString());
-		printout.close();
-		from.setBalance(fromNewBalance);
-		to.setBalance(toNewBalance);
-
-		sc.close();
 	}
 
 	/**
@@ -205,7 +201,7 @@ public class Application {
 	public void confirmQRcode(QRCode qrCode) throws InsuficientFundsException, QRCodeNotFoundException,
 	RequestNotFoundException, UserNotRequesteeException, FileNotFoundException {
 		this.database.getQRCodeByID(qrCode.getID());
-		HashSet<Request> requests = loggedUser.getRequests();
+		Set<Request> requests = loggedUser.getRequests();
 		for (Request request : requests) {
 			if (request.getQRCode().getID() == qrCode.getID()) {
 				int userID = request.getToID();

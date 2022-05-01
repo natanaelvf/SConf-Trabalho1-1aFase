@@ -1,0 +1,10 @@
+grant codeBase "file:${{java.ext.dirs}}/*" {
+        permission java.security.AllPermission;
+};
+// default permissions granted to all domains
+grant {
+//Socket permissions
+  	permission java.net.SocketPermission "*:*", "listen, resolve, accept";
+//File permissions
+  	permission java.io.FilePermission "${/}-", "read, write, delete";
+};

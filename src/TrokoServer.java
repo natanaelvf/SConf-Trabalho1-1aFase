@@ -6,6 +6,7 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
@@ -44,10 +45,9 @@ import objects.User;
 
 public class TrokoServer {
 
-	static Application app;
-	private static Database database;
 
-	public static final String RSA = "RSA/None/OAEPWITHSHA-256ANDMGF1PADDING";
+	private Application app;
+	private Database database;
 
 	private static Key serverPublicKey;
 
@@ -57,8 +57,7 @@ public class TrokoServer {
 	private static final String RSAPASS = "123.Asp1rin2.";
 
 	public static void main(String[] args) throws IOException {
-
-		if (args.length != 3) {
+		if (args.length != 4) {
 
 			System.out.println("Usage format: TrokoServer <port> <keystore> <keystore-password>");
 			System.exit(-1);
@@ -67,9 +66,9 @@ public class TrokoServer {
 		System.out.println("Starting server");
 		TrokoServer server = new TrokoServer();
 
-		int port = Integer.parseInt(args[0]);
+		int port = Integer.parseInt(args[1]);
 
-		init(args[1],args[2]);
+		init(args[2],args[3]);
 
 		server.startServer(port);
 	}
@@ -80,18 +79,23 @@ public class TrokoServer {
 			FileInputStream fis = new FileInputStream(keyStore);
 			ks.load(fis, keyStorePassword.toCharArray());
 			Certificate cert = ks.getCertificate(SERVER_RSA);
-			ciRSA = Cipher.getInstance(RSA);
+			ciRSA = Cipher.getInstance("RSA/None/OAEPWithSHA-1AndMGF1Padding");
+			System.out.println(ciRSA);
 			serverPublicKey = cert.getPublicKey();
 		} catch (KeyStoreException e) {
 			System.out.println("Error getting KeyStore instance.");
 			System.exit(-1);
-		} catch (IOException | NoSuchAlgorithmException | CertificateException e) {
-
+		} catch (CertificateException e) {
 			System.out.println("Error loading KeyStore. Wrong Password?");
 			System.exit(-1);
 		} catch (NoSuchPaddingException e) {
-
 			System.out.println("Error with Cipher.");
+			System.exit(-1);
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println(e);
+			System.exit(-1);
+		} catch (IOException e) {
+			System.out.println(e + ": File not found");
 			System.exit(-1);
 		}
 	}
@@ -100,10 +104,11 @@ public class TrokoServer {
 	public void startServer(int port) throws IOException {
 		try (ServerSocket sSoc = new ServerSocket(port)){
 
-			Application app = new Application();
+			app = new Application();
 			app.setDatabase(new Database());
 			database = new Database();
-
+			database.setKey(serverPublicKey);
+			database.setup();
 
 			app.getDatabase().getUsersFromDB();
 			app.getDatabase().getGroupsFromDB();
@@ -124,6 +129,7 @@ public class TrokoServer {
 			System.exit(-1);
 		}
 	}
+
 	private class ServerThread extends Thread {
 
 		private Socket socket = null;
@@ -135,6 +141,7 @@ public class TrokoServer {
 		ServerThread(Socket inSoc) {
 			socket = inSoc;
 		}
+
 		@Override
 		public void run() {
 
@@ -264,12 +271,9 @@ public class TrokoServer {
 		}
 
 		private Certificate getUserCertificate(String name) throws CertificateException, IOException {
-
 			String getCert = "PubKeys\\" + name + "RSApub.cer";
-
 			CertificateFactory fact;
 			try {
-
 				fact = CertificateFactory.getInstance("X509");
 
 				try (FileInputStream fis  = new FileInputStream(getCert);){
@@ -285,10 +289,8 @@ public class TrokoServer {
 					System.out.println("Error generating Certificate.");
 				}
 			} catch (FileNotFoundException e) {
-
 				System.out.println("Error finding Certificate.");
 			}
-
 			System.out.println("Error getting Certificate. Returning null");
 			return null;
 		}
@@ -480,12 +482,12 @@ public class TrokoServer {
 			return u != null && u.getID() == userID;
 		}
 	}
-	public static Application getApplication() {
-		return app;
+	public Application getApplication() {
+		return this.app;
 	}
 
-	public static Database getDatabase() {
-		return database;
+	public Database getDatabase() {
+		return this.database;
 	}
 }
 

@@ -1,0 +1,7 @@
+// default permissions granted to all domains
+grant {
+//Socket permissions
+	permission java.net.SocketPermission "*:*", "connect, resolve";
+//File permissions
+	permission java.io.FilePermission "${/}-", "read, write";
+};
