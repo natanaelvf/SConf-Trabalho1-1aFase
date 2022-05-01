@@ -2,10 +2,9 @@ package objects;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -15,9 +14,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 public class Database {
@@ -33,6 +30,9 @@ public class Database {
 	private HashMap<Integer, QRCode> qrCodeBase = new HashMap<>();
 
 	private Key serverPublicKey;
+	
+	private static Cipher ciRSA;
+	private static Cipher ciAES;
 
 	Random r = new Random();
 
@@ -311,7 +311,26 @@ public class Database {
 	}
 
 	public void setup() {
+		try {
+
+			ciRSA = Cipher.getInstance("RSA");
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+
+			System.out.println("Error with RSA Cipher.");
+			System.exit(-1);
+		}
+
+		try {
+
+			ciAES = Cipher.getInstance("AES");
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+
+			System.out.println("Error with RSA Cipher.");
+			System.exit(-1);
+		}
+		
 		try (PrintWriter printout = new PrintWriter(USER_TXT);){
+			printout.print("");
 			printout.write(encryptString("100000001:1000.00:300000010-100000003-3250.00;300000011-100000001-1000.00;300000020-100000001-5250.00;300000021-100000002-1250.00;\r\n"));
 			printout.write(encryptString("100000002:2000.00:300000012-100000001-1000.00;300000020-100000001-5250.00;300000021-100000002-1250.00;300000022-100000002-1250.00;\r\n"));
 			printout.write(encryptString("100000003:3000.00:300000020-100000001-5250.00;300000021-100000002-1250.00;300000022-100000002-1250.00;\r\n"));
@@ -321,6 +340,7 @@ public class Database {
 		} 
 
 		try (PrintWriter printout = new PrintWriter(GROUP_TXT);){
+			printout.print("");
 			printout.write(encryptString("200000001:123456789:100000001-100000002-100000003\r\n"));
 			printout.write(encryptString("200000002:100000001:123456789-100000002-100000003\r\n"));
 		} catch (FileNotFoundException e) {
@@ -328,6 +348,7 @@ public class Database {
 		} 
 
 		try (PrintWriter printout = new PrintWriter(".\\src\\bds\\groupsRequests.txt");){
+			printout.print("");
 			printout.write(encryptString("200000001:300000020-100000001-5250.00;300000021-100000002-1250.00\r\n"));
 			printout.write(encryptString("200000002:300000022-100000002-1250.00;300000023-100000003-250.00"));
 		} catch (FileNotFoundException e) {
@@ -335,35 +356,41 @@ public class Database {
 		} 
 
 		try (PrintWriter printout = new PrintWriter(".\\src\\bds\\groupsRequestHistory.txt");){
+			printout.print("");
 			printout.write(encryptString("200000001:300000015-100000001-4250.00;300000016-100000002-1500.00\r\n"));
 			printout.write(encryptString("200000002:300000017-100000003-1250.00;300000018-100000004-500.00"));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} 
 	}
-	
-	private String decryptString(String dataToDecrypt) {
+
+	public String encryptString(String dataToEncrypt) {
+
 		try {
-			Cipher ciRSA = Cipher.getInstance("RSA/None/OAEPWithSHA-1AndMGF1Padding");
-			byte[] text = dataToDecrypt.getBytes(StandardCharsets.UTF_8);
-			ciRSA.init(Cipher.DECRYPT_MODE, serverPublicKey);
-			byte[] textDecrypted = ciRSA.doFinal(text);
-			return new String(textDecrypted);
-		} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException | NoSuchAlgorithmException | NoSuchPaddingException e) {
+
+			byte[] text = dataToEncrypt.getBytes("UTF-8");
+			ciAES.init(Cipher.ENCRYPT_MODE, serverPublicKey);
+			return new String(ciAES.doFinal(text));
+
+		} catch (Exception e) {
+
 			e.printStackTrace();
+			return "";
 		}
-		return "";
 	}
-	
-	private String encryptString(String dataToEncrypt) {
+
+	public String decryptString(String dataToDecrypt) {
+
 		try {
-			Cipher ciRSA = Cipher.getInstance("RSA/None/OAEPWithSHA-1AndMGF1Padding");
-			byte[] text = dataToEncrypt.getBytes(StandardCharsets.UTF_8);
-			ciRSA.init(Cipher.ENCRYPT_MODE, serverPublicKey);
-			return new String(ciRSA.doFinal(text));
-		} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException | NoSuchAlgorithmException | NoSuchPaddingException e) {
+			ciAES.init(Cipher.DECRYPT_MODE, serverPublicKey);
+			byte[] bytesToDecrypt = dataToDecrypt.getBytes();
+			byte[] textDecrypted = ciAES.doFinal(bytesToDecrypt);
+			return new String(textDecrypted);
+
+		} catch (Exception e) {
+
 			e.printStackTrace();
+			return null;
 		}
-		return "";
 	}
 }

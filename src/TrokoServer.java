@@ -52,6 +52,7 @@ public class TrokoServer {
 	private static Key serverPublicKey;
 
 	private static Cipher ciRSA;
+	private static Cipher ciAES;
 	private static KeyStore ks;
 	private static final String SERVER_RSA = "serverRSA";
 	private static final String RSAPASS = "123.Asp1rin2.";
@@ -62,11 +63,9 @@ public class TrokoServer {
 			System.out.println("Usage format: TrokoServer <port> <keystore> <keystore-password>");
 			System.exit(-1);
 		} 
-
-		System.out.println("Starting server");
-		TrokoServer server = new TrokoServer();
-
 		int port = Integer.parseInt(args[1]);
+		System.out.println("Starting server on port: " + port);
+		TrokoServer server = new TrokoServer();
 
 		init(args[2],args[3]);
 
@@ -79,8 +78,8 @@ public class TrokoServer {
 			FileInputStream fis = new FileInputStream(keyStore);
 			ks.load(fis, keyStorePassword.toCharArray());
 			Certificate cert = ks.getCertificate(SERVER_RSA);
-			ciRSA = Cipher.getInstance("RSA/None/OAEPWithSHA-1AndMGF1Padding");
-			System.out.println(ciRSA);
+			ciRSA = Cipher.getInstance("RSA");
+
 			serverPublicKey = cert.getPublicKey();
 		} catch (KeyStoreException e) {
 			System.out.println("Error getting KeyStore instance.");
@@ -108,7 +107,6 @@ public class TrokoServer {
 			app.setDatabase(new Database());
 			database = new Database();
 			database.setKey(serverPublicKey);
-			database.setup();
 
 			app.getDatabase().getUsersFromDB();
 			app.getDatabase().getGroupsFromDB();
@@ -168,14 +166,13 @@ public class TrokoServer {
 
 				outStream = new ObjectOutputStream(socket.getOutputStream());
 				inStream = new ObjectInputStream(socket.getInputStream());
-				try {
 
+				try {
 					userName = (String)inStream.readObject();	
-					userID = Integer.parseInt(userName);//Receber 1
+					userID = Integer.parseInt(userName); //Receber 1
 					user= database.getUserByID(userID);
 
-				} catch (IOException | ClassNotFoundException e1) {
-
+				} catch (IOException e) {
 					System.out.println("Error recieving Client ID.");
 
 					outStream.close();

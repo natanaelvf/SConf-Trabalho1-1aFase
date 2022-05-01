@@ -31,7 +31,7 @@ import objects.User;
 
 public class Trokos {
 
-	public static final String RSA = "RSA/None/OAEPWITHSHA-256ANDMGF1PADDING";
+	public static final String RSA = "RSA";
 	static ObjectOutputStream outStream;
 	static ObjectInputStream  inStream;
 	static Socket clientSocket;
@@ -47,27 +47,22 @@ public class Trokos {
 
 	public static void main(String[] args) throws NumberFormatException,
 	IOException, ClassNotFoundException {
-		if (args.length != 5) {    //Se nao tiver os argumentos obrigatorios
+		if (args.length != 6) {    //Se nao tiver os argumentos obrigatorios
 			System.out.println("Usage format: Trokos <serverAddress> <truststore> <keystore> <keystore-password> <clientID>");
 			System.exit(-1);
 		} 
 
-		String[] serverAddress = args[0].split(":");
-		int serverPort = Integer.parseInt(args[0].split(":")[1]); 				//Port do servidor
+		String[] serverAddress = args[1].split(":");
+		int serverPort = Integer.parseInt(args[1].split(":")[1]); 				//Port do servidor
 
 		try(Socket clientSocket = new Socket(serverAddress[0], serverPort)) {
-
-			//SocketFactory socFac = SSLSocketFactory.getDefault(); //SSL
-			//SSLSocket clientSocket = (SSLSocket) socFac.createSocket(serverAddress[0], serverPort); //Socket a conectar  //SSL
-
-			//clientSocket.startHandshake();	//SSL
 			System.out.println("Connected to server.");
 
 			inStream = new ObjectInputStream(clientSocket.getInputStream());	//Input
 			outStream = new ObjectOutputStream(clientSocket.getOutputStream());	//Output
-			//Scanner
+			//Scanner String keystore, String keystorePassword, String id
 
-			init(args[2], args[3], args[4]);
+			init(args[3], args[4], args[5]);
 
 			outStream.writeObject(userID);     						//Enviar 1
 			System.out.println("Id sent.");
@@ -180,7 +175,6 @@ public class Trokos {
 		try {
 			KeyStore ks = KeyStore.getInstance("JCEKS");
 			try (FileInputStream fis = new FileInputStream(keyStore)) {
-
 				ks.load(fis, keyStorePass.toCharArray());
 				cert = ks.getCertificate(userID + "RSA");
 			} catch (IOException | NoSuchAlgorithmException | CertificateException e) {
