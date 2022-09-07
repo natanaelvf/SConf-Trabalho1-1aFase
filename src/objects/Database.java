@@ -2,11 +2,12 @@ package objects;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -30,9 +31,10 @@ public class Database {
 	private HashMap<Integer, QRCode> qrCodeBase = new HashMap<>();
 
 	private Key serverPublicKey;
-	
-	private static Cipher ciRSA;
-	private static Cipher ciAES;
+	private Key serverPrivateKey;
+
+	private Cipher ciRSA;
+	private Cipher ciAES;
 
 	Random r = new Random();
 
@@ -82,7 +84,7 @@ public class Database {
 				PrintWriter printout = new PrintWriter(USER_TXT);) {
 			StringBuilder sb = new StringBuilder();
 			while (sc.hasNextLine()) {
-				String line = decryptString(sc.nextLine());
+				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
 
 				int userId = Integer.parseInt(splitLine[0]);
@@ -102,7 +104,7 @@ public class Database {
 				PrintWriter printout = new PrintWriter(USER_TXT);) {
 			StringBuilder sb = new StringBuilder();
 			while (sc.hasNextLine()) {
-				String line = decryptString(sc.nextLine());;
+				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
 
 				int userId = Integer.parseInt(splitLine[0]);
@@ -127,7 +129,7 @@ public class Database {
 			PrintWriter printout = new PrintWriter(GROUP_TXT);
 
 			while (sc.hasNextLine()) {
-				String line = decryptString(sc.nextLine());;
+				String line = sc.nextLine();
 				sb.append(line);
 			}
 
@@ -181,13 +183,13 @@ public class Database {
 		}
 	}
 
-	public void addUser(User user) throws FileNotFoundException {		
+	public void addUser(User user) throws FileNotFoundException {
 		try(PrintWriter printout = new PrintWriter(USER_TXT);
 				Scanner sc = new Scanner(new File(USER_TXT));) {
 			StringBuilder sb = new StringBuilder();
 
 			while (sc.hasNextLine()) {
-				String line = decryptString(sc.nextLine());;
+				String line = sc.nextLine();
 				sb.append(line+"\r\n");
 			}
 			sb.append(user.getID()+":"+user.getBalance()+":");
@@ -195,15 +197,15 @@ public class Database {
 				sb.append(request.getId() + "-" + request.getFromID() + "-" + request.getAmount() + ";");
 			}
 
-			this.userBase.put(user.getID(),user);
+			this.userBase.put(user.getID(), user);
 			printout.write(sb.toString());
 		}
 	}
 
-	public void getUsersFromDB() throws FileNotFoundException {
+	public void getUsersFromDB() {
 		try(Scanner sc = new Scanner(new File(USER_TXT));) {
 			while (sc.hasNextLine()) {
-				String line = decryptString(sc.nextLine());
+				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
 
 				int userId = Integer.parseInt(splitLine[0]);
@@ -221,14 +223,16 @@ public class Database {
 				}
 				User user = new User(userId, userBalance, userRequests);
 				this.userBase.put(user.getID(), user);
-			}
+			} 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
 		}
 	}
 
 	public void getGroupsFromDB() throws FileNotFoundException {
 		try(Scanner sc = new Scanner(new File(GROUP_TXT));) {
 			while (sc.hasNextLine()) {
-				String line = decryptString(sc.nextLine());
+				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
 
 				int groupId = Integer.parseInt(splitLine[0]);
@@ -250,8 +254,7 @@ public class Database {
 	public void getGroupRequestsFromDB() throws FileNotFoundException {
 		try (Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequests.txt"));) {
 			while (sc.hasNextLine()) {
-
-				String line = decryptString(sc.nextLine());;
+				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
 
 				Group group = this.getGroupByID(Integer.parseInt(splitLine[0]));
@@ -280,7 +283,7 @@ public class Database {
 		try (Scanner sc = new Scanner(new File(".\\src\\bds\\groupsRequestHistory.txt"));) {
 			while (sc.hasNextLine()) {
 
-				String line = decryptString(sc.nextLine());
+				String line = sc.nextLine();
 				String[] splitLine = line.split(":");
 
 				Group group = this.getGroupByID(Integer.parseInt(splitLine[0]));
@@ -312,7 +315,6 @@ public class Database {
 
 	public void setup() {
 		try {
-
 			ciRSA = Cipher.getInstance("RSA");
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
 
@@ -321,44 +323,43 @@ public class Database {
 		}
 
 		try {
-
 			ciAES = Cipher.getInstance("AES");
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
 
 			System.out.println("Error with RSA Cipher.");
 			System.exit(-1);
 		}
-		
+
 		try (PrintWriter printout = new PrintWriter(USER_TXT);){
 			printout.print("");
-			printout.write(encryptString("100000001:1000.00:300000010-100000003-3250.00;300000011-100000001-1000.00;300000020-100000001-5250.00;300000021-100000002-1250.00;\r\n"));
-			printout.write(encryptString("100000002:2000.00:300000012-100000001-1000.00;300000020-100000001-5250.00;300000021-100000002-1250.00;300000022-100000002-1250.00;\r\n"));
-			printout.write(encryptString("100000003:3000.00:300000020-100000001-5250.00;300000021-100000002-1250.00;300000022-100000002-1250.00;\r\n"));
-			printout.write(encryptString("123456789:2000.00:300000013-100000003-1250.00;300000014-100000001-1000.00;300000022-100000002-1250.00;\r\n"));
+			printout.write("100000001:1000.00:300000010-100000003-3250.00;300000011-100000001-1000.00;300000020-100000001-5250.00;300000021-100000002-1250.00;\r\n");
+			printout.write("100000002:2000.00:300000012-100000001-1000.00;300000020-100000001-5250.00;300000021-100000002-1250.00;300000022-100000002-1250.00;\r\n");
+			printout.write("100000003:3000.00:300000020-100000001-5250.00;300000021-100000002-1250.00;300000022-100000002-1250.00;\r\n");
+			printout.write("123456789:2000.00:300000013-100000003-1250.00;300000014-100000001-1000.00;300000022-100000002-1250.00;\r\n");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} 
 
 		try (PrintWriter printout = new PrintWriter(GROUP_TXT);){
 			printout.print("");
-			printout.write(encryptString("200000001:123456789:100000001-100000002-100000003\r\n"));
-			printout.write(encryptString("200000002:100000001:123456789-100000002-100000003\r\n"));
+			printout.write("200000001:123456789:100000001-100000002-100000003\r\n");
+			printout.write("200000002:100000001:123456789-100000002-100000003\r\n");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} 
 
 		try (PrintWriter printout = new PrintWriter(".\\src\\bds\\groupsRequests.txt");){
 			printout.print("");
-			printout.write(encryptString("200000001:300000020-100000001-5250.00;300000021-100000002-1250.00\r\n"));
-			printout.write(encryptString("200000002:300000022-100000002-1250.00;300000023-100000003-250.00"));
+			printout.write("200000001:300000020-100000001-5250.00;300000021-100000002-1250.00\r\n");
+			printout.write("200000002:300000022-100000002-1250.00;300000023-100000003-250.00");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} 
 
 		try (PrintWriter printout = new PrintWriter(".\\src\\bds\\groupsRequestHistory.txt");){
 			printout.print("");
-			printout.write(encryptString("200000001:300000015-100000001-4250.00;300000016-100000002-1500.00\r\n"));
-			printout.write(encryptString("200000002:300000017-100000003-1250.00;300000018-100000004-500.00"));
+			printout.write("200000001:300000015-100000001-4250.00;300000016-100000002-1500.00\r\n");
+			printout.write("200000002:300000017-100000003-1250.00;300000018-100000004-500.00");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} 
@@ -367,13 +368,11 @@ public class Database {
 	public String encryptString(String dataToEncrypt) {
 
 		try {
-
-			byte[] text = dataToEncrypt.getBytes("UTF-8");
-			ciAES.init(Cipher.ENCRYPT_MODE, serverPublicKey);
-			return new String(ciAES.doFinal(text));
+			byte[] text = dataToEncrypt.getBytes(StandardCharsets.UTF_8);
+			ciRSA.init(Cipher.ENCRYPT_MODE, serverPublicKey);
+			return new String(ciRSA.doFinal(text));
 
 		} catch (Exception e) {
-
 			e.printStackTrace();
 			return "";
 		}
@@ -382,15 +381,21 @@ public class Database {
 	public String decryptString(String dataToDecrypt) {
 
 		try {
-			ciAES.init(Cipher.DECRYPT_MODE, serverPublicKey);
-			byte[] bytesToDecrypt = dataToDecrypt.getBytes();
-			byte[] textDecrypted = ciAES.doFinal(bytesToDecrypt);
+			ciRSA.init(Cipher.DECRYPT_MODE, serverPrivateKey);
+			byte[] textDecrypted = ciRSA.doFinal(dataToDecrypt.getBytes());
 			return new String(textDecrypted);
 
 		} catch (Exception e) {
-
 			e.printStackTrace();
 			return null;
 		}
+	}
+
+	public void setPublicKey(Key serverPublicKey) {
+		this.serverPublicKey = serverPublicKey;
+	}
+
+	public void setPrivateKey(Key serverPrivateKey) {
+		this.serverPrivateKey = serverPrivateKey;
 	}
 }

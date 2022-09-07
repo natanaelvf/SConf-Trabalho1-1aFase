@@ -38,7 +38,6 @@ public class Trokos {
 
 	private static String keyStore;
 	private static String keyStorePass;
-	private static Cipher ciRSA;
 	private static Cipher ciAES;
 	private static Certificate cert;
 	private static String userID;
@@ -50,7 +49,7 @@ public class Trokos {
 		if (args.length != 6) {    //Se nao tiver os argumentos obrigatorios
 			System.out.println("Usage format: Trokos <serverAddress> <truststore> <keystore> <keystore-password> <clientID>");
 			System.exit(-1);
-		} 
+		}
 
 		String[] serverAddress = args[1].split(":");
 		int serverPort = Integer.parseInt(args[1].split(":")[1]); 				//Port do servidor
@@ -100,15 +99,6 @@ public class Trokos {
 					System.exit(-1);
 				}
 			}
-			String answer = (String)inStream.readObject(); //
-			System.out.println(answer);
-
-
-			//			Application app = TrokoServer.getApplication();
-			//			Database database = TrokoServer.getDatabase();
-			//			User loggedUser = database.getUserByID(Integer.parseInt(userID));
-			//			app.setLoggedUser(loggedUser);
-
 			Trokos client = new Trokos();
 			client.startClient();
 		} catch (IOException e) {
@@ -152,19 +142,10 @@ public class Trokos {
 	private static void init(String keystore, String keystorePassword, String id) {
 		try {
 
-			ciRSA = Cipher.getInstance(RSA);
+			ciAES = Cipher.getInstance("AES");
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
 
-			System.out.println("Error with RSA Cipher.");
-			System.exit(-1);
-		}
-
-		try {
-
-			ciAES = Cipher.getInstance("AES/GCM/NoPadding");
-		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-
-			System.out.println("Error with RSA Cipher.");
+			System.out.println("Error with AES Cipher.");
 			System.exit(-1);
 		}
 
@@ -191,12 +172,12 @@ public class Trokos {
 
 
 	private void startClient() throws IOException, ClassNotFoundException {
-		Scanner sc = new Scanner(System.in);
 		printHelp();
+		Scanner sc = new Scanner(System.in);
 		String userInput = sc.nextLine();
 
-		while (userInput.equals("quit")) {
-			if (userInput.equals("help")) {
+		while (!userInput.equals("quit")) {
+			if (!userInput.equals("help")) {
 				outStream.writeObject(userInput);
 				String fromServer = (String) inStream.readObject();
 				System.out.println(fromServer);
@@ -206,7 +187,6 @@ public class Trokos {
 			userInput = sc.nextLine();
 		}
 		System.out.println("Thank you for playing!");
-		sc.close();
 	}
 
 	private void printHelp() {
@@ -239,7 +219,7 @@ public class Trokos {
 
 	private static Certificate getUserCertificate(String name) throws IOException {
 
-		String getCert = "..\\PubKeys\\" + name + "RSApub.cer";
+		String getCert = ".\\src\\PubKeys\\" + name + "RSApub.cer";
 
 		CertificateFactory fact;
 		try {

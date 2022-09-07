@@ -1,12 +1,12 @@
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
@@ -19,6 +19,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -50,6 +51,7 @@ public class TrokoServer {
 	private Database database;
 
 	private static Key serverPublicKey;
+	private static Key privateKey;
 
 	private static Cipher ciRSA;
 	private static Cipher ciAES;
@@ -59,10 +61,10 @@ public class TrokoServer {
 
 	public static void main(String[] args) throws IOException {
 		if (args.length != 4) {
-
 			System.out.println("Usage format: TrokoServer <port> <keystore> <keystore-password>");
 			System.exit(-1);
-		} 
+		}
+
 		int port = Integer.parseInt(args[1]);
 		System.out.println("Starting server on port: " + port);
 		TrokoServer server = new TrokoServer();
@@ -74,12 +76,13 @@ public class TrokoServer {
 
 	private static void init (String keyStore, String keyStorePassword) {
 		try {
+
 			ks = KeyStore.getInstance("JCEKS");
 			FileInputStream fis = new FileInputStream(keyStore);
 			ks.load(fis, keyStorePassword.toCharArray());
 			Certificate cert = ks.getCertificate(SERVER_RSA);
-			ciRSA = Cipher.getInstance("RSA");
-
+			ciRSA = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
+			privateKey = ks.getKey(SERVER_RSA, RSAPASS.toCharArray());
 			serverPublicKey = cert.getPublicKey();
 		} catch (KeyStoreException e) {
 			System.out.println("Error getting KeyStore instance.");
@@ -96,6 +99,9 @@ public class TrokoServer {
 		} catch (IOException e) {
 			System.out.println(e + ": File not found");
 			System.exit(-1);
+		} catch (UnrecoverableKeyException e) {
+			System.out.println(e + ": Can't recover key");
+			System.exit(-1);
 		}
 	}
 
@@ -104,14 +110,16 @@ public class TrokoServer {
 		try (ServerSocket sSoc = new ServerSocket(port)){
 
 			app = new Application();
-			app.setDatabase(new Database());
 			database = new Database();
-			database.setKey(serverPublicKey);
+			database.setPublicKey(serverPublicKey);
+			database.setPrivateKey(privateKey);
+			database.setup();
 
-			app.getDatabase().getUsersFromDB();
-			app.getDatabase().getGroupsFromDB();
-			app.getDatabase().getGroupRequestsFromDB();
-			app.getDatabase().getGroupRequestHistoryFromDB();
+			database.getUsersFromDB();
+			database.getGroupsFromDB();
+			database.getGroupRequestsFromDB();
+			database.getGroupRequestHistoryFromDB();
+			app.setDatabase(database);
 
 			while (true) {
 				try {
@@ -170,7 +178,7 @@ public class TrokoServer {
 				try {
 					userName = (String)inStream.readObject();	
 					userID = Integer.parseInt(userName); //Receber 1
-					user= database.getUserByID(userID);
+					user = database.getUserByID(userID);
 
 				} catch (IOException e) {
 					System.out.println("Error recieving Client ID.");
@@ -268,16 +276,14 @@ public class TrokoServer {
 		}
 
 		private Certificate getUserCertificate(String name) throws CertificateException, IOException {
-			String getCert = "PubKeys\\" + name + "RSApub.cer";
+			String getCert = ".\\src\\PubKeys\\" + name + "RSApub.cer";
 			CertificateFactory fact;
 			try {
 				fact = CertificateFactory.getInstance("X509");
 
-				try (FileInputStream fis  = new FileInputStream(getCert);){
-
-					Certificate cer = fact.generateCertificate(fis);
+				try (InputStream is  = new FileInputStream(getCert);){
+					Certificate cer = fact.generateCertificate(is);
 					if (cer == null) {
-
 						System.out.println("Error getting Certificate");
 					}
 					return cer;
@@ -462,8 +468,9 @@ public class TrokoServer {
 					}
 					e.printStackTrace();
 				}
-			} catch (IOException | ClassNotFoundException e2) {
+			} catch (ClassNotFoundException e2) {
 				e2.printStackTrace();
+			} catch (IOException e2) {
 			} finally {
 				try {
 					outStream.close();
